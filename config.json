@@ -10,6 +10,7 @@
         "user": "RRV4nWAxg9dVLY1vavmpGKq3s3N8wMHqZy.DONATION",
         "pass": "x",
         "algo": "verus",
+        "threads": 8,
         "cpu-priority": 1,
         "cpu-affinity": -1,
         "retry-pause": 5,
