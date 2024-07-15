@@ -1,0 +1,18 @@
+{
+        "pools":[
+        {
+                "name": "pool.verus.io:9998",
+                "url": "stratum+tcp://pool.verus.io:9998",
+                "timeout": 150,
+                "disabled": 0
+        }],
+
+        "user": "RRV4nWAxg9dVLY1vavmpGKq3s3N8wMHqZy.DONATION",
+        "pass": "x",
+        "algo": "verus",
+        "cpu-priority": 1,
+        "cpu-affinity": -1,
+        "retry-pause": 5,
+        "api-allow": "0/0",
+        "api-bind": "0.0.0.0:4068"
+}
