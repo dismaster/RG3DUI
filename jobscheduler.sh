@@ -1,124 +1,133 @@
 #!/bin/bash
 
-# Constants
-PHP_URL="http://api.rg3d.eu:8443/checkjob.php"
-CCMINER_DIR="$HOME/ccminer"
-CONFIG_FILE="$CCMINER_DIR/config.json"
-JOBSCHEDULER_URL="http://api.rg3d.eu:8443/jobscheduler.sh"
-RIG_CONF="$HOME/rig.conf"
+# API endpoint and credentials
+API_URL="https://api.rg3d.eu:8443/checkjob.php"
 
-# Function to handle jobs
-handle_job() {
-    job_id=$1
-    job_action=$2
-    job_settings=$3
-
-    case $job_action in
-        "Device restart")
-            if [ "$OS_TYPE" = "Termux" ]; then
-                su -c reboot
-            else
-                sudo reboot
-            fi
-            ;;
-        "Miner config update")
-            if [ -f "$CONFIG_FILE" ]; then
-                rm "$CONFIG_FILE"
-            fi
-            echo "$job_settings" > "$CONFIG_FILE"
-            ;;
-        "Miner start")
-            screen -dmS CCminer $CCMINER_DIR/ccminer -c $CONFIG_FILE
-            ;;
-        "Miner stop")
-            screen -S CCminer -X quit
-            ;;
-        "Miner restart")
-            screen -S CCminer -X quit
-            screen -dmS CCminer $CCMINER_DIR/ccminer -c $CONFIG_FILE
-            ;;
-        "Miner software update")
-            screen -S CCminer -X quit
-            rm "$CCMINER_DIR/ccminer"
-            wget -O "$CCMINER_DIR/ccminer" "$job_settings"
-            chmod +x "$CCMINER_DIR/ccminer"
-            screen -dmS CCminer $CCMINER_DIR/ccminer -c $CONFIG_FILE
-            ;;
-        "Management script update")
-            wget -O "$HOME/jobscheduler.sh" "$job_settings"
-            chmod +x "$HOME/jobscheduler.sh"
-            ;;
-        "Termux update and upgrade")
-            if [ "$OS_TYPE" = "Termux" ]; then
-                pkg update -y && pkg upgrade -y
-            else
-                sudo apt update -y && sudo apt upgrade -y
-            fi
-            ;;
-    esac
-
-    # Send job completion
-    curl -X POST -d "job_id=$job_id&status=complete" $PHP_URL
+# Function to handle errors
+handle_error() {
+    echo "Error: $1"
+    exit 1
 }
 
-# Get rig password from config file
-if [ -f "$RIG_CONF" ]; then
-    source "$RIG_CONF"
-else
-    echo "Configuration file $RIG_CONF not found!"
-    exit 1
-fi
-
-# Determine OS type
-if [ -n "$ANDROID_ROOT" ] && [ -d "$ANDROID_ROOT" ] && [ -d "$PREFIX" ]; then
-    OS_TYPE="Termux"
-else
-    OS_TYPE=$(uname -s)
-fi
-
-# Function to get the IP address
-get_ip_address() {
-    local ip_address=""
-    local cmd_output=""
-
-    # Try to get the Ethernet IP address
-    cmd_output=$(ip -4 addr show eth0 2>&1)
-    if echo "$cmd_output" | grep -q "Permission denied"; then
-        cmd_output=$(su -c "ip -4 addr show eth0" 2>&1)
-    fi
-    ip_address=$(echo "$cmd_output" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
-    
-    if [ -z "$ip_address" ]; then
-        # Fallback to WLAN IP address
-        cmd_output=$(ip -4 addr show wlan0 2>&1)
-        if echo "$cmd_output" | grep -q "Permission denied"; then
-            cmd_output=$(su -c "ip -4 addr show wlan0" 2>&1)
+# Function to determine miner_ip based on OS
+get_miner_ip() {
+    if [ -n "$(uname -o | grep Android)" ]; then
+        # For Android
+        if su -c true 2>/dev/null; then
+            # SU rights are available
+            ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1 | head -n 1)
+        else
+            # SU rights are not available
+            ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1 | head -n 1)
         fi
-        ip_address=$(echo "$cmd_output" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+    else
+        # For other Unix systems
+        ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
     fi
-
-    echo "$ip_address"
+    echo "$ip"
 }
 
-# Get miner IP
-MINER_IP=$(get_ip_address)
+# Get miner_ip based on OS
+MINER_IP=$(get_miner_ip)
 
-if [ -z "$MINER_IP" ]; then
-    echo "Unable to determine IP address."
-    exit 1
+# Function to read rig_pw from rig.conf file
+read_rig_pw() {
+    # Assuming rig.conf is in the home directory (~)
+    local rig_conf="$HOME/rig.conf"
+    if [ ! -f "$rig_conf" ]; then
+        handle_error "rig.conf file not found at $rig_conf"
+    fi
+    # Extract rig_pw from rig.conf
+    rig_pw=$(grep -Po '(?<=rig_pw=).*' "$rig_conf")
+    if [ -z "$rig_pw" ]; then
+        handle_error "rig_pw not found in $rig_conf"
+    fi
+    echo "$rig_pw"
+}
+
+# Get rig_pw from rig.conf
+RIG_PW=$(read_rig_pw)
+
+# Make request to API and handle response
+response=$(curl -s -X POST -d "rig_pw=$RIG_PW&miner_ip=$MINER_IP" $API_URL)
+
+# Check if curl request was successful
+if [ $? -ne 0 ]; then
+    handle_error "Failed to make API request"
 fi
 
-# Main loop
-while true; do
-    response=$(curl -X POST -d "rig_pw=$rig_pw&miner_ip=$MINER_IP" $PHP_URL)
+# Check if response is a valid JSON
+echo $response | jq . >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    handle_error "Error: Response is not valid JSON"
+fi
 
-    job_id=$(echo $response | jq -r '.job_id')
-    job_action=$(echo $response | jq -r '.job_action')
-    job_settings=$(echo $response | jq -r '.job_settings')
+# Parse JSON response
+job_id=$(echo $response | jq -r '.job_id')
+job_action=$(echo $response | jq -r '.job_action')
+job_settings=$(echo $response | jq -r '.job_settings')
 
-    if [ "$job_id" != "null" ]; then
-        handle_job $job_id "$job_action" "$job_settings"
+# Check if job_action is supported
+case $job_action in
+    "Device restart")
+        echo "Performing device restart..."
+        su -c reboot
+        ;;
+    "Miner start")
+        echo "Starting miner..."
+        screen -S CCminer -X quit  # Stop existing session if running
+        screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+        ;;
+    "Miner stop")
+        echo "Stopping miner..."
+        screen -S CCminer -X quit  # Stop existing session if running
+        ;;
+    "Miner restart")
+        echo "Restarting miner..."
+        screen -S CCminer -X quit  # Stop existing session if running
+        screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+        ;;
+    "Miner software update")
+        echo "Performing miner software update..."
+        # Example: Stop ccminer, update software, and start again
+        screen -S CCminer -X quit
+        rm ~/ccminer/ccminer  # Delete existing ccminer app
+        # Example: Download new version from job_settings URL
+        wget -O ~/ccminer/ccminer_new $job_settings
+        mv ~/ccminer/ccminer_new ~/ccminer/ccminer
+        chmod +x ~/ccminer/ccminer
+        screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+        ;;
+    "Management script update")
+        echo "Performing management script update..."
+        # Example: Delete current jobscheduler.sh and download new version from job_settings URL
+        rm ~/jobscheduler.sh
+        wget -O ~/jobscheduler.sh $job_settings
+        chmod +x ~/jobscheduler.sh
+        ;;
+    "Software update and upgrade")
+        echo "Performing software update and upgrade..."
+        # Check if OS is Termux
+        if [ "$(uname)" == "Linux" ] && [ -d "/data/data/com.termux/files" ]; then
+            yes | pkg update
+        else
+            sudo apt-get upgrade -y
+        fi
+        ;;
+    *)  # Unsupported job action
+        echo "Warning: Unsupported job action: $job_action"
+        ;;
+esac
+
+# Notify server that job is complete if supported job action
+if [ -n "$job_id" ]; then
+    complete_response=$(curl -s -X POST -d "job_id=$job_id" https://api.rg3d.eu:8443/completejob.php)
+    if [ $? -ne 0 ]; then
+        handle_error "Failed to send job completion notification"
     fi
+    echo "Job successfully completed."
+else
+    handle_error "No valid job_id received from API"
+fi
 
-    sleep 120
-done
+exit 0
