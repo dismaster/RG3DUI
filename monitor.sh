@@ -13,21 +13,19 @@ send_data() {
   fi
 }
 
-# Check if conenctivity to Internet is given
-x=`ping -c1 google.com 2>&1 | grep unknown`
+# Check if connectivity to Internet is given
+x=$(ping -c1 google.com 2>&1 | grep unknown)
 if [ ! "$x" = "" ]; then
-  # For Android if conenction is down try to restart Wifi network
+  # For Android if connection is down, try to restart Wifi network
   if su -c true 2>/dev/null; then
     # SU rights are available
-        echo "Connection to Internet broken. Restarting Network!"
-        su -c input keyevent 26
-        su -c svc wifi disable
-        su -c svc wifi enable
-	sleep 10
+    echo "Connection to Internet broken. Restarting Network!"
+    su -c input keyevent 26
+    su -c svc wifi disable
+    su -c svc wifi enable
+    sleep 10
   fi
-
 fi
-
 
 # Parse arguments
 dryrun=false
@@ -92,10 +90,16 @@ if ! screen -list | grep -q "\.CCminer"; then
   sleep 5
 fi
 
+# Check again if ccminer is running, exit if not
+if ! screen -list | grep -q "\.CCminer"; then
+  echo "ccminer not running. Exiting."
+  exit 1
+fi
+
 # 6. Get summary output of ccminer API socket (default port)
 summary_raw=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0')
-  
-# Remove trailing '|' character if present
+
+# Remove trailing '|'
 summary_raw=${summary_raw%|}
 
 # Convert summary_raw into JSON format
@@ -113,8 +117,6 @@ summary_json+="}"
 pool_raw=$(echo 'pool' | nc 127.0.0.1 4068 | tr -d '\0')
 
 # Remove trailing '|'
-
-# Remove trailing '|' character if present
 pool_raw=${pool_raw%|}
 
 # Convert pool_raw into JSON format
