@@ -82,15 +82,7 @@ else
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
 fi
 
-# 5. Ensure ccminer is running in screen session CCminer
-if ! screen -list | grep -q "\.CCminer"; then
-  # Start ccminer in a new screen session named CCminer
-  screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
-  # Wait 5 seconds for ccminer to start
-  sleep 5
-fi
-
-# Check again if ccminer is running, exit if not
+# 5. Check if ccminer is running, exit if not
 if ! screen -list | grep -q "\.CCminer"; then
   echo "ccminer not running. Exiting."
   exit 1
