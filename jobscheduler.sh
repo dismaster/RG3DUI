@@ -46,13 +46,6 @@ job_action=$(echo $response | jq -r '.job_action' 2>/dev/null)
 job_settings=$(echo $response | jq -r '.job_settings' 2>/dev/null)
 rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null)
 
-# Debugging output
-echo "Response from API:"
-echo "job_id: $job_id"
-echo "job_action: $job_action"
-echo "job_settings: $job_settings"
-echo "rig_fs: $rig_fs"
-
 # Handle flightsheet configuration
 config_file=~/ccminer/config.json
 if [ "$rig_fs" != "0" ]; then
