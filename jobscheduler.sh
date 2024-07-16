@@ -149,8 +149,8 @@ case $job_action in
     if [ -f ~/monitoring.sh ]; then
       rm ~/monitoring.sh
     fi
-    wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitoring.sh
-    chmod +x ~/monitoring.sh
+    wget -q -O ~/monitor.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
+    chmod +x ~/monitor.sh
     ;;
   *)
     echo "Unsupported job action: $job_action"
