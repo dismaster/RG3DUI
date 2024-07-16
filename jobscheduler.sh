@@ -149,7 +149,7 @@ case $job_action in
     if [ -f ~/monitoring.sh ]; then
       rm ~/monitoring.sh
     fi
-    wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
+    wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitoring.sh
     chmod +x ~/monitoring.sh
     ;;
   *)
