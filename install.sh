@@ -161,9 +161,10 @@ if [[ $(uname -o) == "Android" ]]; then
     curl -sSL https://github.com/Oink70/CCminer-ARM-optimized/releases/download/v3.8.3-4/ccminer-3.8.3-4_ARM -o ~/ccminer/ccminer
     chmod +x ~/ccminer/ccminer
 
-    # Run jobscheduler.sh and monitor.sh, overwrite if exists
+    # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
 
     # Add jobscheduler.sh and monitor.sh to crontab
     add_to_crontab jobscheduler.sh
