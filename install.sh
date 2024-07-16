@@ -69,8 +69,8 @@ function build_ccminer {
     mv ~/ccminer/ccminer_build ~/ccminer/ccminer
     
     # Change directory to ccminer_build, run build.sh and copy ccminer into ~/ccminer folder
-    run_command_silently (cd ~/ccminer/ccminer && ./build.sh)
-    run_command_silently cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
+    (cd ~/ccminer/ccminer && ./build.sh)
+    cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
     
     # Clean up ccminer_build folder
     run_command_silently rm -rf ~/ccminer/ccminer_build
