@@ -142,6 +142,11 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       wget -q -O ~/jobscheduler.sh $job_settings
       chmod +x ~/jobscheduler.sh
       ;;
+    "Monitoring Software update")
+      rm ~/monitoring.sh
+      wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
+      chmod +x ~/monitoring.sh
+      ;;
     *)
       echo "Unsupported job action: $job_action"
       ;;
