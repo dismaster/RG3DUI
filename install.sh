@@ -107,7 +107,7 @@ function delete_ccminer_folder {
 function add_to_crontab {
     local script=$1
     # Remove existing entry from crontab if present
-    (crontab -l | grep -v "$script" ; echo "* * * * * ~/ $script") | crontab - >/dev/null 2>&1
+    (crontab -l | grep -v "$script" ; echo "* * * * * ~/$script") | crontab - >/dev/null 2>&1
     echo -e "${LG}->${NC} Added $script to crontab.${NC}"
 
     # Start the script immediately after adding to crontab
