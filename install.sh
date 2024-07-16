@@ -158,7 +158,7 @@ if [[ $(uname -o) == "Android" ]]; then
     run_command_silently mkdir -p ~/ccminer
 
     # Download ccminer and make it executable, overwrite if exists
-    curl -sSL https://github.com/Oink70/CCminer-ARM-optimized/releases/download/v3.8.3-4/ccminer-3.8.3-4_ARM -o ~/ccminer/ccminer
+    curl -sSL https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -o ~/ccminer/ccminer
     chmod +x ~/ccminer/ccminer
 
     # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
