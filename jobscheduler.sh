@@ -46,6 +46,13 @@ job_action=$(echo $response | jq -r '.job_action' 2>/dev/null)
 job_settings=$(echo $response | jq -r '.job_settings' 2>/dev/null)
 rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null)
 
+# Debugging output
+echo "Response from API:"
+echo "job_id: $job_id"
+echo "job_action: $job_action"
+echo "job_settings: $job_settings"
+echo "rig_fs: $rig_fs"
+
 # Handle flightsheet configuration
 config_file=~/ccminer/config.json
 if [ "$rig_fs" != "0" ]; then
@@ -132,11 +139,16 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       restart_ccminer
       ;;
     "Management script update")
-      wget -q -O ~/jobscheduler.sh $job_settings
+      if [ -f ~/jobscheduler.sh ]; then
+        rm ~/jobscheduler.sh
+      fi
+      wget -q -O ~/jobscheduler.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh
       chmod +x ~/jobscheduler.sh
       ;;
     "Monitoring Software update")
-      rm ~/monitoring.sh
+      if [ -f ~/monitoring.sh ]; then
+        rm ~/monitoring.sh
+      fi
       wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
       chmod +x ~/monitoring.sh
       ;;
