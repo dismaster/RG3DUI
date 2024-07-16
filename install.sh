@@ -220,6 +220,8 @@ else
     rm -rf ~/ccminer/ccminer_build
 fi
 
+# Remove installation script
+run_command_silently rm install.sh
+
 # Success message
 echo -e "${LG}->${NC} Script execution completed.${NC}"
-rm ~install.sh
