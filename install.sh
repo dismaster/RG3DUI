@@ -61,17 +61,17 @@ function build_ccminer {
     sudo apt update
     sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
 
+    # Create ~/ccminer folder and copy ccminer executable
+    run_command_silently mkdir -p ~/ccminer
+    
     # Clone ccminer repository and rename folder to ccminer_build
     git clone https://github.com/tpruvot/ccminer ~/ccminer/ccminer_build
     mv ~/ccminer/ccminer_build ~/ccminer/ccminer
-
-    # Change directory to ccminer_build and run build.sh
-    (cd ~/ccminer/ccminer && ./build.sh)
-
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command_silently mkdir -p ~/ccminer
-    cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
-
+    
+    # Change directory to ccminer_build, run build.sh and copy ccminer into ~/ccminer folder
+    run_command_silently (cd ~/ccminer/ccminer && ./build.sh)
+    run_command_silently cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
+    
     # Clean up ccminer_build folder
     run_command_silently rm -rf ~/ccminer/ccminer_build
 }
