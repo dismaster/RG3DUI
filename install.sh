@@ -11,6 +11,19 @@ LB='\033[1;34m'  # Light Blue
 P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
+# Function to display a progress bar
+function show_progress {
+    local duration=$1
+    local label=$2
+
+    echo -ne "${LB}${label}: ["
+    for i in $(seq 1 10); do
+        echo -ne "${LB}#${NC}"
+        sleep $((duration / 10))
+    done
+    echo -e "${LB}]${NC}"
+}
+
 # Fancy Banner with RG3D VERUS Logo
 echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#${NC} ${LB}__________   ________ ________  ________              ${LC}#${NC}"
@@ -33,7 +46,6 @@ echo -e "${LC}#########################################################${NC}"
 echo  # New line for spacing
 echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
 echo  # New line for spacing
-
 
 # Function to suppress output of commands
 function run_command_silently {
@@ -59,22 +71,26 @@ function download_and_make_executable {
 # Function to build ccminer from source
 function build_ccminer {
     # Update package repository and install dependencies
+    show_progress 5 "Updating package repository and installing dependencies"
     sudo apt update
     sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
 
     # Clone ccminer repository and rename folder to ccminer_build
+    show_progress 3 "Cloning ccminer repository and preparing build"
     git clone https://github.com/tpruvot/ccminer ~/ccminer/ccminer_build
     mv ~/ccminer/ccminer_build ~/ccminer/ccminer
 
     # Change directory to ccminer_build and run build.sh
+    show_progress 10 "Building ccminer from source"
     (cd ~/ccminer/ccminer && ./build.sh)
 
     # After build, create ~/ccminer folder and copy ccminer executable
+    show_progress 2 "Finalizing ccminer installation"
     run_command_silently mkdir -p ~/ccminer
     cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
 
     # Clean up ccminer_build folder
-    rm -rf ~/ccminer/ccminer_build
+    run_command_silently rm -rf ~/ccminer/ccminer_build
 }
 
 # Function to prompt for password with verification
@@ -136,10 +152,12 @@ if [[ $(uname -o) == "Android" ]]; then
     echo -e "${R}->${NC} Detected OS: Termux${NC}"
 
     # Update and upgrade packages
+    show_progress 5 "Updating and upgrading packages"
     run_command_silently pkg update -y
     run_command_silently pkg upgrade -y
 
     # Install required packages
+    show_progress 3 "Installing required packages"
     run_command_silently pkg install -y cronie termux-services libjansson wget nano screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
 
     # Create ~/.termux folder if not exists
@@ -149,6 +167,7 @@ if [[ $(uname -o) == "Android" ]]; then
     run_command_silently mkdir -p ~/.termux/boot
 
     # Change directory to ~/.termux/boot and download boot_start script
+    show_progress 2 "Downloading and configuring boot_start script"
     (cd ~/.termux/boot && curl -sSL https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -o boot_start)
 
     # Make boot_start script executable
@@ -158,15 +177,18 @@ if [[ $(uname -o) == "Android" ]]; then
     run_command_silently mkdir -p ~/ccminer
 
     # Download ccminer and make it executable, overwrite if exists
+    show_progress 4 "Downloading and installing ccminer"
     curl -sSL https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -o ~/ccminer/ccminer
     chmod +x ~/ccminer/ccminer
 
     # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
+    show_progress 3 "Downloading and installing additional scripts"
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
 
     # Add jobscheduler.sh and monitor.sh to crontab
+    show_progress 2 "Adding jobscheduler.sh and monitor.sh to crontab"
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
 
@@ -175,18 +197,22 @@ elif [[ $(uname -m) == "arm"* ]]; then
     echo -e "${R}->${NC} Detected OS: Raspberry Pi${NC}"
 
     # Update and install necessary packages
+    show_progress 5 "Updating and installing necessary packages"
     run_command_silently sudo apt-get update
     run_command_silently sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
+    show_progress 3 "Cloning CCminer repository and preparing build"
     run_command_silently git clone https://github.com/Oink70/CCminer-ARM-optimized ~/ccminer
     mv ~/ccminer/CCminer-ARM-optimized ~/ccminer/ccminer
 
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
+    show_progress 2 "Downloading and installing additional scripts"
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
 
     # Add jobscheduler.sh and monitor.sh to crontab
+    show_progress 1 "Adding jobscheduler.sh and monitor.sh to crontab"
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
 
@@ -195,18 +221,22 @@ else
     echo -e "${R}->${NC} Detected OS: $(uname -o)${NC}"
 
     # Update and install necessary packages
+    show_progress 5 "Updating and installing necessary packages"
     run_command_silently sudo apt update
     run_command_silently sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
 
-    # Change directory to ~/ccminer_build and clone CCminer repository
+    # Clone CCminer repository and rename folder to ccminer_build
+    show_progress 3 "Cloning CCminer repository and preparing build"
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
 
     # Add jobscheduler.sh and monitor.sh to crontab
+    show_progress 2 "Adding jobscheduler.sh and monitor.sh to crontab"
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
 
     # Clone CCminer repository and rename folder to ccminer_build
+    show_progress 5 "Building ccminer from source"
     git clone https://github.com/tpruvot/ccminer ~/ccminer_build
     mv ~/ccminer_build ~/ccminer/ccminer_build
 
@@ -214,11 +244,12 @@ else
     (cd ~/ccminer/ccminer_build && ./build.sh)
 
     # After build, create ~/ccminer folder and copy ccminer executable
+    show_progress 2 "Finalizing ccminer installation"
     run_command_silently mkdir -p ~/ccminer
     cp ~/ccminer/ccminer_build/ccminer ~/ccminer/ccminer
 
     # Clean up ccminer_build folder
-    rm -rf ~/ccminer/ccminer_build
+    run_command_silently rm -rf ~/ccminer/ccminer_build
 fi
 
 # Remove installation script
