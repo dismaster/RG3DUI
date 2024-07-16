@@ -140,7 +140,7 @@ if [ -n "$(uname -o | grep Android)" ]; then
   # For Termux on Android
   cpu_temp=$(~/vcgencmd measure_temp 2>/dev/null | cut -d '=' -f 2 | cut -d "'" -f 1)
   if [ -z "$cpu_temp" ]; then
-    cpu_temp=$(su -c '~/vcgencmd measure_temp' | cut -d '=' -f 2 | cut -d "'" -f 1)
+    cpu_temp=$(su -c ~/vcgencmd measure_temp | cut -d '=' -f 2 | cut -d "'" -f 1)
   fi
 elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
   # For Raspberry Pi (or similar ARM-based systems)
