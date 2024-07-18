@@ -212,7 +212,9 @@ else
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
-    run_command_silently (cd ~/ccminer_build && ./build.sh)
+    run_command_silently cd ~/ccminer_build 
+    run_command_silently ./build.sh 
+    run_command_silently cd ~/
 
     # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
