@@ -14,7 +14,7 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 Before you begin, ensure you have met the following requirements:
 - **Operating System**: Linux with 64bit CPU, Raspberry Pi5 or higher, Phone with Termux installed (including termix-api and termux-boot)
 - **RIG Password**: Generate a RIG to get a new from the GUI
-- 
+
 ## Installation
 
 Follow these steps to install the Mining GUI on your system:
