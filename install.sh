@@ -171,7 +171,7 @@ if [[ $(uname -o) == "Android" ]]; then
     run_command_silently pkg upgrade -y
 
     # Install required packages
-    run_command_silently pkg install -y cronie termux-services libjansson wget nano screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
+    run_command_silently pkg install -y cronie termux-services libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
 
     # Create ~/.termux folder if not exists
     run_command_silently mkdir -p ~/.termux
@@ -210,7 +210,7 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
-    run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk -y
+    run_command_silently sudo apt-get install git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk -y
     run_command_silently sudo apt-get install libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 -y
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
@@ -239,7 +239,8 @@ else
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
-    run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen -y
+    run_command_silently sudo apt-get install git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk -y
+    run_command_silently sudo apt-get install libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 -y
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
