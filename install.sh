@@ -179,7 +179,8 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
-    run_command_silently ~/ccminer_build/build.sh
+    cd ~/ccminer_build
+    run_command_silently ./build.sh
 
     # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
