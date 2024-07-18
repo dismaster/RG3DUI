@@ -116,6 +116,13 @@ function add_to_crontab {
     ~/ $script >/dev/null 2>&1 &
 }
 
+# Function to add scripts to crontab
+function start_miner_at_reboot {
+    # Remove existing entry from crontab if present
+    (crontab -l | grep -v "@reboot /user/bin/screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json" ; echo "@reboot /user/bin/screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json") | crontab - >/dev/null 2>&1
+    echo -e "${LG}->${NC} Added automated start of miner at boot.${NC}"
+}
+
 # Delete existing ~/ccminer folder including files in it, if it exists
 delete_ccminer_folder
 
@@ -194,6 +201,12 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
     # Add jobscheduler.sh and monitor.sh to crontab
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
+    
+    # Add ccminer to start on boot
+    (crontab -l | grep -v "$script" ; echo "@reboot /user/bin/screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json") | crontab - >/dev/null 2>&1
+
+    # Add ccminer to start on boot
+    start_miner_at_reboot
 
 else
     # For other Linux distributions
@@ -216,6 +229,9 @@ else
     # Add jobscheduler.sh and monitor.sh to crontab
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
+
+    # Add ccminer to start on boot
+    start_miner_at_reboot
 fi
 
 # Remove installation script
