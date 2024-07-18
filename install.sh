@@ -183,15 +183,14 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
-    cd ~/ccminer_build
-    run_command_silently ./build.sh
+    run_command_silently (cd ~/ccminer_build && ./build.sh)
 
     # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
     run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
     
     # Clean up ccminer_build folder
-    run_command_silently rm -rf ~/ccminer/ccminer_build
+    run_command_silently rm -rf ~/ccminer_build
 
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
