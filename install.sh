@@ -58,22 +58,19 @@ function download_and_make_executable {
 # Function to build ccminer from source
 function build_ccminer {
     # Update package repository and install dependencies
-    sudo apt update
-    sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
-
-    # Create ~/ccminer folder and copy ccminer executable
+    run_command_silently cd ~/ccminer_build 
+    run_command_silently ./build.sh 
+    run_command_silently cd ~/
+    
+    # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
-    
-    # Clone ccminer repository and rename folder to ccminer_build
-    git clone https://github.com/tpruvot/ccminer ~/ccminer/ccminer_build
-    mv ~/ccminer/ccminer_build ~/ccminer/ccminer
-    
-    # Change directory to ccminer_build, run build.sh and copy ccminer into ~/ccminer folder
-    (cd ~/ccminer/ccminer && ./build.sh)
-    cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
+    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
     
     # Clean up ccminer_build folder
     run_command_silently rm -rf ~/ccminer_build
+
+    # Install default config for DONATION
+    wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
 }
 
 # Function to prompt for password with verification
@@ -168,7 +165,10 @@ if [[ $(uname -o) == "Android" ]]; then
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
-
+    
+    # Install default config for DONATION
+    wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+    
     # Add jobscheduler.sh and monitor.sh to crontab
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
@@ -183,17 +183,10 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
-    run_command_silently cd ~/ccminer_build 
-    run_command_silently ./build.sh 
-    run_command_silently cd ~/
-    
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command_silently mkdir -p ~/ccminer
-    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
-    
-    # Clean up ccminer_build folder
-    run_command_silently rm -rf ~/ccminer_build
 
+    # Build ccminer with basic configuration
+    build_ccminer
+    
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
@@ -212,17 +205,10 @@ else
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
-    run_command_silently cd ~/ccminer_build 
-    run_command_silently ./build.sh 
-    run_command_silently cd ~/
 
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command_silently mkdir -p ~/ccminer
-    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
+    # Build ccminer with basic configuration
+    build_ccminer
     
-    # Clean up ccminer_build folder
-    run_command_silently rm -rf ~/ccminer_build
-
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
@@ -235,5 +221,8 @@ fi
 # Remove installation script
 run_command_silently rm install.sh
 
+# Start mining instance
+run_command_silently screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+
 # Success message
-echo -e "${LG}->${NC} Script execution completed.${NC}"
+echo -e "${LG}->${NC} Installation completed and mining started.${NC}"
