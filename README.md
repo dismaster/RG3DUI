@@ -24,7 +24,7 @@ Follow these steps to install the Mining GUI on your system:
 Open your terminal and execute the following command:
 
 ```sh
-curl -O https://raw.githubusercontent.com/dismaster/RG3DUI/main/install.sh && chmod +x install.sh && ./install.sh
+curl -O https://raw.githubusercontent.com/dismaster/RG3DUI/main/install.sh >/dev/null 2>&1 && chmod +x install.sh && ./install.sh
 ```
 
 #### Configuration
