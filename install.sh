@@ -179,7 +179,7 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
-    run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
+    run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen -y
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
     run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
