@@ -235,9 +235,6 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
     add_to_crontab monitor.sh
     
     # Add ccminer to start on boot
-    (crontab -l | grep -v "$script" ; echo "@reboot /user/bin/screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json") | crontab - >/dev/null 2>&1
-
-    # Add ccminer to start on boot
     start_miner_at_reboot
 
 else
