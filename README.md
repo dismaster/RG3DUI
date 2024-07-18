@@ -17,7 +17,7 @@ Before you begin, ensure you have met the following requirements:
 
 ## Installation
 
-Follow these steps to install the Mining GUI on your system:
+Follow these steps to install the Mining Monitoring on your system:
 
 ### Download and Run the Installation Script
 
