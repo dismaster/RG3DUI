@@ -61,6 +61,9 @@ function download_and_make_executable {
 # Function to build ccminer from source for SBCs
 function build_ccminer_sbc {
     # Update package repository and install dependencies
+    run_command_silently wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command_silently sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command_silently rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently cd ~/ccminer_build 
     run_command_silently chmod +x build.sh
     run_command_silently chmod +x configure.sh
@@ -207,6 +210,7 @@ if [[ $(uname -o) == "Android" ]]; then
 elif [[ $(uname -m) == "aarch64"* ]]; then
     # Assuming Raspberry Pi OS
     echo -e "${R}->${NC} Detected OS: SBC${NC}"
+    echo -e "${R}->${NC} ${LC}You might get asked for SUDO password - required for Updates${NC}"
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
@@ -236,6 +240,7 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
 else
     # For other Linux distributions
     echo -e "${R}->${NC} Detected OS: $(uname -o)${NC}"
+    echo -e "${R}->${NC} ${LC}You might get asked for SUDO password - required for Updates${NC}"
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
