@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Clearing screen
+cls 
+
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
 R='\033[0;31m'   # Red
