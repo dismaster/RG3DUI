@@ -85,6 +85,9 @@ function build_ccminer_sbc {
 # Function to build ccminer from source for UNIX
 function build_ccminer_unix {
     # Update package repository and install dependencies
+    run_command_silently wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command_silently sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command_silently rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently cd ~/ccminer_build 
     run_command_silently ./build.sh 
     run_command_silently cd ~/
