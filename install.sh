@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Clearing screen
-cls 
+clear 
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
