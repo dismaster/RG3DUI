@@ -101,6 +101,10 @@ function delete_ccminer_folder {
         echo -e "${R}->${NC} Deleting existing ~/ccminer folder and its contents${NC}"
         rm -rf ~/ccminer
     fi
+    if [ -d ~/ccminer_build ]; then
+        echo -e "${R}->${NC} Deleting existing ~/ccminer_build folder and its contents${NC}"
+        rm -rf ~/ccminer
+    fi
 }
 
 # Function to add scripts to crontab
