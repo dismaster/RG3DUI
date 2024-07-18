@@ -2,7 +2,7 @@
 
 Welcome to the Mining GUI installation guide! This document will walk you through the steps necessary to install and set up the Mining GUI on your system.
 
-![Mining GUI](https://api.rg3d.eu:8443)
+[Mining GUI](https://api.rg3d.eu:8443)
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
