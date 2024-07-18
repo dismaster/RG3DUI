@@ -55,8 +55,29 @@ function download_and_make_executable {
     chmod +x $filename
 }
 
-# Function to build ccminer from source
-function build_ccminer {
+# Function to build ccminer from source for SBCs
+function build_ccminer_sbc {
+    # Update package repository and install dependencies
+    run_command_silently cd ~/ccminer_build 
+    run_command_silently chmod +x build.sh
+    run_command_silently chmod +x configure.sh
+    run_command_silently chmod +x autogen.sh
+    run_command_silently CXX=clang++ CC=clang build.sh
+    run_command_silently cd ~/
+    
+    # After build, create ~/ccminer folder and copy ccminer executable
+    run_command_silently mkdir -p ~/ccminer
+    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
+    
+    # Clean up ccminer_build folder
+    run_command_silently rm -rf ~/ccminer_build
+
+    # Install default config for DONATION
+    wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+}
+
+# Function to build ccminer from source for UNIX
+function build_ccminer_unix {
     # Update package repository and install dependencies
     run_command_silently cd ~/ccminer_build 
     run_command_silently ./build.sh 
@@ -182,17 +203,18 @@ if [[ $(uname -o) == "Android" ]]; then
 
 elif [[ $(uname -m) == "aarch64"* ]]; then
     # Assuming Raspberry Pi OS
-    echo -e "${R}->${NC} Detected OS: Raspberry Pi${NC}"
+    echo -e "${R}->${NC} Detected OS: SBC${NC}"
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
     run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 -y
+    run_command_silently sudo apt-get install libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 -y
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
-    run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
+    run_command_silently git clone https://github.com/Oink70/CCminer-ARM-optimized.git ~/ccminer_build
 
     # Build ccminer with basic configuration
-    build_ccminer
+    build_ccminer_sbc
     
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
@@ -220,7 +242,7 @@ else
     run_command_silently git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
 
     # Build ccminer with basic configuration
-    build_ccminer
+    build_ccminer_unix
     
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
