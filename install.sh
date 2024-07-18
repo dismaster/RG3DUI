@@ -169,17 +169,24 @@ if [[ $(uname -o) == "Android" ]]; then
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
 
-elif [[ $(uname -m) == "arm"* ]]; then
+elif [[ $(uname -m) == "aarch64"* ]]; then
     # Assuming Raspberry Pi OS
     echo -e "${R}->${NC} Detected OS: Raspberry Pi${NC}"
 
     # Update and install necessary packages
     run_command_silently sudo apt-get update
-    run_command_silently sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
+    run_command_silently sudo apt-get install libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
 
     # Clone CCminer repository and rename folder to ccminer, overwrite if exists
-    run_command_silently git clone https://github.com/Oink70/CCminer-ARM-optimized ~/ccminer
-    mv ~/ccminer/CCminer-ARM-optimized ~/ccminer/ccminer
+    run_command_silently git clone --single-branch -b ARM https://github.com/monkins1010/ccminer.git ~/ccminer_build
+    run_command_silently ~/ccminer_build/build.sh
+
+    # After build, create ~/ccminer folder and copy ccminer executable
+    run_command_silently mkdir -p ~/ccminer
+    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
+    
+    # Clean up ccminer_build folder
+    run_command_silently rm -rf ~/ccminer/ccminer_build
 
     # Run jobscheduler.sh and monitor.sh, overwrite if exists
     download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
