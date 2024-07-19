@@ -60,24 +60,14 @@ function download_and_make_executable {
 
 # Function to build ccminer from source for SBCs
 function build_ccminer_sbc {
-    echo -e "${R}->${NC} SBC Miner Setup: START${NC}"
     # Update package repository and install dependencies
     run_command_silently wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command_silently cd ~/ccminer_build 
-    run_command_silently chmod +x build.sh
-    run_command_silently chmod +x configure.sh
-    run_command_silently chmod +x autogen.sh
-    run_command_silently CXX=clang++ CC=clang build.sh
-    run_command_silently cd ~/
-    
+   
     # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
-    run_command_silently mv ~/ccminer_build/ccminer ~/ccminer/ccminer
-    
-    # Clean up ccminer_build folder
-    run_command_silently rm -rf ~/ccminer_build
+    run_command_silently wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
 
     # Install default config for DONATION
     wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
@@ -85,7 +75,6 @@ function build_ccminer_sbc {
 
 # Function to build ccminer from source for UNIX
 function build_ccminer_unix {
-    echo -e "${R}->${NC} UNIX Miner Setup: START${NC}"
     # Update package repository and install dependencies
     run_command_silently wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
@@ -221,9 +210,6 @@ elif [[ $(uname -m) == "aarch64"* ]]; then
     run_command_silently sudo apt-get update
     run_command_silently sudo apt-get install git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk -y
     run_command_silently sudo apt-get install libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 -y
-
-    # Clone CCminer repository and rename folder to ccminer, overwrite if exists
-    run_command_silently git clone https://github.com/Oink70/CCminer-ARM-optimized.git ~/ccminer_build
 
     # Build ccminer with basic configuration
     build_ccminer_sbc
