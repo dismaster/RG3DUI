@@ -169,7 +169,7 @@ if [[ $(uname -o) == "Android" ]]; then
     run_command_silently pkg upgrade -y
 
     # Install required packages
-    run_command_silently pkg install -y cronie termux-services libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
+    run_command_silently pkg install -y cronie termux-services termux-auth libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
 
     # Create ~/.termux folder if not exists
     run_command_silently mkdir -p ~/.termux
