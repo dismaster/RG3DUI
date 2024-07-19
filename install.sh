@@ -200,6 +200,8 @@ if [[ $(uname -o) == "Android" ]]; then
     
     # Install default config for DONATION
     wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+
+    echo -e "${R}->${NC} CCminer and Config installed${NC}"
     
     # Add jobscheduler.sh and monitor.sh to crontab
     add_to_crontab jobscheduler.sh
