@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Enable debugging if -debug argument is provided
+DEBUG=false
+if [ "$1" == "-debug" ]; then
+  DEBUG=true
+fi
+
+# Function to print debug messages
+debug() {
+  if [ "$DEBUG" = true ]; then
+    echo "$1"
+  fi
+}
+
 # Function to get the IP address
 get_ip_address() {
   if [ -n "$(uname -o | grep Android)" ]; then
@@ -24,11 +37,10 @@ restart_ccminer() {
   screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
 }
 
-# Function to update the threads in config.json
+# Function to update threads in config.json
 update_threads() {
-  local config_file=$1
   cpu_count=$(lscpu | grep -E '^CPU\(s\):' | awk '{print $2}')
-  jq --argjson threads $cpu_count '.threads = $threads' $config_file > ${config_file}.tmp && mv ${config_file}.tmp $config_file
+  jq --argjson threads "$cpu_count" '.threads = $threads' $config_file > ${config_file}.tmp && mv ${config_file}.tmp $config_file
 }
 
 # Read rig_pw from ~/rig.conf
@@ -47,51 +59,47 @@ job_settings=$(echo $response | jq -r '.job_settings' 2>/dev/null)
 rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null)
 
 # Debugging output
-echo "Response from API:"
-echo "job_id: $job_id"
-echo "job_action: $job_action"
-echo "job_settings: $job_settings"
-echo "rig_fs: $rig_fs"
+debug "Response from API:"
+debug "job_id: $job_id"
+debug "job_action: $job_action"
+debug "job_settings: $job_settings"
+debug "rig_fs: $rig_fs"
 
 # Handle flightsheet configuration
 config_file=~/ccminer/config.json
 restart_required=false
+
 if [ "$rig_fs" != "0" ]; then
   if [ -f $config_file ]; then
+    current_config=$(jq -S . $config_file)
     current_pool=$(jq -r '.pools[0].url' $config_file)
     current_user=$(jq -r '.user' $config_file)
     current_pass=$(jq -r '.pass' $config_file)
     config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
-    if [ "$config_response" != "No changes needed" ]; then
+    config_response_parsed=$(echo "$config_response" | jq -S .)
+    if [ "$config_response_parsed" != "$current_config" ]; then
       echo "$config_response" > $config_file
-      update_threads $config_file
+      update_threads
       restart_required=true
-    else
-      echo "No changes needed in config.json"
     fi
   else
-    echo "config.json not found. Downloading new config.json..."
     config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
-    if [ "$config_response" != "Flight sheet not found" ]; then
+    config_response_parsed=$(echo "$config_response" | jq -S .)
+    if [ "$config_response_parsed" != "Flight sheet not found" ]; then
       echo "$config_response" > $config_file
-      update_threads $config_file
+      update_threads
       restart_required=true
     else
-      echo "Failed to get flight sheet configuration"
       exit 1
     fi
   fi
 elif [ ! -f $config_file ] || [ "$(jq -r '.user' $config_file)" != "RRccuLtVhHTcbTBr3z4kjqe3ubVAzrcWzn.DONATION" ]; then
-  echo "Downloading config.json..."
   wget -q -O $config_file https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
   if [ $? -ne 0 ]; then
-    echo "Failed to download config.json"
     exit 1
   fi
-  update_threads $config_file
+  update_threads
   restart_required=true
-else
-  echo "Skipping download of config.json as user field is correct."
 fi
 
 # Check if job_id is not null or empty before processing job actions
@@ -99,45 +107,44 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
   case $job_action in
     "Miner config update")
       if [ -f $config_file ]; then
+        current_config=$(jq -S . $config_file)
         current_pool=$(jq -r '.pools[0].url' $config_file)
         current_user=$(jq -r '.user' $config_file)
         current_pass=$(jq -r '.pass' $config_file)
         config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
-        if [ "$config_response" != "No changes needed" ]; then
+        config_response_parsed=$(echo "$config_response" | jq -S .)
+        if [ "$config_response_parsed" != "$current_config" ]; then
           echo "$config_response" > $config_file
-          update_threads $config_file
+          update_threads
           restart_required=true
-        else
-          echo "No changes needed in config.json"
         fi
       else
-        echo "config.json not found. Downloading new config.json..."
         config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
-        if [ "$config_response" != "Flight sheet not found" ]; then
+        config_response_parsed=$(echo "$config_response" | jq -S .)
+        if [ "$config_response_parsed" != "Flight sheet not found" ]; then
           echo "$config_response" > $config_file
-          update_threads $config_file
+          update_threads
           restart_required=true
         else
-          echo "Failed to get flight sheet configuration"
           exit 1
         fi
       fi
       ;;
     "Miner start")
-      restart_ccminer
+      restart_required=true
       ;;
     "Miner stop")
       screen -S CCminer -X quit
       ;;
     "Miner restart")
-      restart_ccminer
+      restart_required=true
       ;;
     "Miner software update")
       screen -S CCminer -X quit
       rm ~/ccminer/ccminer
       wget -q -O ~/ccminer/ccminer $job_settings
       chmod +x ~/ccminer/ccminer
-      restart_ccminer
+      restart_required=true
       ;;
     "Management script update")
       if [ -f ~/jobscheduler.sh ]; then
@@ -154,7 +161,6 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       chmod +x ~/monitoring.sh
       ;;
     *)
-      echo "Unsupported job action: $job_action"
       ;;
   esac
 
@@ -162,14 +168,13 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
   if [ -n "$job_id" ]; then
     complete_response=$(curl -s -X POST -d "job_id=$job_id" https://api.rg3d.eu:8443/completejob.php)
     if [ $? -ne 0 ]; then
-      echo "Failed to send job completion notification"
+      debug "Failed to send job completion notification"
     fi
-    echo "Job successfully completed."
   else
-    echo "No valid job_id received from API"
+    debug "No valid job_id received from API"
   fi
 else
-  echo "No job available."
+  debug "No job available."
 fi
 
 # Restart ccminer only if needed
