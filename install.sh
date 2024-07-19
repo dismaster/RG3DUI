@@ -68,6 +68,7 @@ function build_ccminer_sbc {
     # After build, create ~/ccminer folder and copy ccminer executable
     run_command_silently mkdir -p ~/ccminer
     run_command_silently wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
+    chmod +x ~/ccminer/ccminer
 
     # Install default config for DONATION
     wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
