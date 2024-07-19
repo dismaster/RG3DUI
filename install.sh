@@ -60,6 +60,7 @@ function download_and_make_executable {
 
 # Function to build ccminer from source for SBCs
 function build_ccminer_sbc {
+    echo -e "${R}->${NC} SBC Miner Setup: START${NC}"
     # Update package repository and install dependencies
     run_command_silently wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
     run_command_silently sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
