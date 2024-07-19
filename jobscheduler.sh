@@ -175,6 +175,13 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
       chmod +x ~/monitoring.sh
       ;;
+    "Termux Boot update")
+      if [ -f ~/.termux/boot/boot_start ]; then
+        rm ~/.termux/boot/boot_start
+      fi
+      wget -q -O~/.termux/boot/boot_start https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start
+      chmod +x ~/.termux/boot/boot_start
+      ;;
     *)
       ;;
   esac
