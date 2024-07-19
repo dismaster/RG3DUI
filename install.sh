@@ -167,9 +167,11 @@ if [[ $(uname -o) == "Android" ]]; then
     # Update and upgrade packages
     run_command_silently pkg update -y
     run_command_silently pkg upgrade -y
+    echo -e "${R}->${NC} Termux Upgrade completed${NC}"
 
     # Install required packages
     run_command_silently pkg install -y cronie termux-services termux-auth libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
+    echo -e "${R}->${NC} Package installation completed${NC}"
 
     # Create ~/.termux folder if not exists
     run_command_silently mkdir -p ~/.termux
@@ -182,6 +184,7 @@ if [[ $(uname -o) == "Android" ]]; then
 
     # Make boot_start script executable
     chmod +x ~/.termux/boot/boot_start
+    echo -e "${R}->${NC} Termux Boot File installed${NC}"
 
     # Create ~/ccminer folder if not exists
     run_command_silently mkdir -p ~/ccminer
