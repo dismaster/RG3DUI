@@ -149,7 +149,7 @@ function add_to_crontab {
 # Function to add scripts to crontab
 function start_miner_at_reboot {
     # Remove existing entry from crontab if present
-    (crontab -l | grep -v "@reboot /user/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /user/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
+    (crontab -l | grep -v "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
     echo -e "${LG}->${NC} Added automated start of miner at boot.${NC}"
 }
 
