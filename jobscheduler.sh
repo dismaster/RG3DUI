@@ -43,6 +43,11 @@ update_threads() {
   jq --argjson threads "$cpu_count" '.threads = $threads' $config_file > ${config_file}.tmp && mv ${config_file}.tmp $config_file
 }
 
+# Function to check if getconfig.php is reachable with a 2-second timeout
+check_getconfig_reachable() {
+  curl -s --connect-timeout 2 -o /dev/null -w "%{http_code}" https://api.rg3d.eu:8443/getconfig.php
+}
+
 # Read rig_pw from ~/rig.conf
 rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 
@@ -70,27 +75,32 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 if [ "$rig_fs" != "0" ]; then
-  if [ -f $config_file ]; then
-    current_config=$(jq -S . $config_file)
-    current_pool=$(jq -r '.pools[0].url' $config_file)
-    current_user=$(jq -r '.user' $config_file)
-    current_pass=$(jq -r '.pass' $config_file)
-    config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
-    config_response_parsed=$(echo "$config_response" | jq -S .)
-    if [ "$config_response_parsed" != "$current_config" ]; then
-      echo "$config_response" > $config_file
-      update_threads
-      restart_required=true
-    fi
+  getconfig_reachable=$(check_getconfig_reachable)
+  if [ "$getconfig_reachable" != "200" ]; then
+    debug "getconfig.php is not reachable. Skipping configuration check."
   else
-    config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
-    config_response_parsed=$(echo "$config_response" | jq -S .)
-    if [ "$config_response_parsed" != "Flight sheet not found" ]; then
-      echo "$config_response" > $config_file
-      update_threads
-      restart_required=true
+    if [ -f $config_file ]; then
+      current_config=$(jq -S . $config_file)
+      current_pool=$(jq -r '.pools[0].url' $config_file)
+      current_user=$(jq -r '.user' $config_file)
+      current_pass=$(jq -r '.pass' $config_file)
+      config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
+      config_response_parsed=$(echo "$config_response" | jq -S .)
+      if [ "$config_response_parsed" != "$current_config" ]; then
+        echo "$config_response" > $config_file
+        update_threads
+        restart_required=true
+      fi
     else
-      exit 1
+      config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
+      config_response_parsed=$(echo "$config_response" | jq -S .)
+      if [ "$config_response_parsed" != "Flight sheet not found" ]; then
+        echo "$config_response" > $config_file
+        update_threads
+        restart_required=true
+      else
+        exit 1
+      fi
     fi
   fi
 elif [ ! -f $config_file ] || [ "$(jq -r '.user' $config_file)" != "RRccuLtVhHTcbTBr3z4kjqe3ubVAzrcWzn.DONATION" ]; then
@@ -106,27 +116,32 @@ fi
 if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
   case $job_action in
     "Miner config update")
-      if [ -f $config_file ]; then
-        current_config=$(jq -S . $config_file)
-        current_pool=$(jq -r '.pools[0].url' $config_file)
-        current_user=$(jq -r '.user' $config_file)
-        current_pass=$(jq -r '.pass' $config_file)
-        config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
-        config_response_parsed=$(echo "$config_response" | jq -S .)
-        if [ "$config_response_parsed" != "$current_config" ]; then
-          echo "$config_response" > $config_file
-          update_threads
-          restart_required=true
-        fi
+      getconfig_reachable=$(check_getconfig_reachable)
+      if [ "$getconfig_reachable" != "200" ]; then
+        debug "getconfig.php is not reachable. Skipping configuration update."
       else
-        config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
-        config_response_parsed=$(echo "$config_response" | jq -S .)
-        if [ "$config_response_parsed" != "Flight sheet not found" ]; then
-          echo "$config_response" > $config_file
-          update_threads
-          restart_required=true
+        if [ -f $config_file ]; then
+          current_config=$(jq -S . $config_file)
+          current_pool=$(jq -r '.pools[0].url' $config_file)
+          current_user=$(jq -r '.user' $config_file)
+          current_pass=$(jq -r '.pass' $config_file)
+          config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=$current_pool&current_user=$current_user&current_pass=$current_pass" https://api.rg3d.eu:8443/getconfig.php)
+          config_response_parsed=$(echo "$config_response" | jq -S .)
+          if [ "$config_response_parsed" != "$current_config" ]; then
+            echo "$config_response" > $config_file
+            update_threads
+            restart_required=true
+          fi
         else
-          exit 1
+          config_response=$(curl -s -X POST -d "rig_fs=$rig_fs&current_pool=&current_user=&current_pass=" https://api.rg3d.eu:8443/getconfig.php)
+          config_response_parsed=$(echo "$config_response" | jq -S .)
+          if [ "$config_response_parsed" != "Flight sheet not found" ]; then
+            echo "$config_response" > $config_file
+            update_threads
+            restart_required=true
+          else
+            exit 1
+          fi
         fi
       fi
       ;;
