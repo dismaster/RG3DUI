@@ -179,7 +179,7 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       if [ -f ~/.termux/boot/boot_start ]; then
         rm ~/.termux/boot/boot_start
       fi
-      wget -q -O~/.termux/boot/boot_start https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start
+      wget -q -O ~/.termux/boot/boot_start https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start
       chmod +x ~/.termux/boot/boot_start
       ;;
     *)
