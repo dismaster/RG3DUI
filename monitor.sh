@@ -2,10 +2,8 @@
 
 # Function to check if API URL is reachable
 check_api_url() {
-  local url="https://api.rg3d.eu:8443/api.php"
-  # Try to establish connection with a timeout and limit total time
-  if curl --output /dev/null --silent --head --fail \
-      --connect-timeout 5 --max-time 10 "$url"; then
+  local url="https://api.rg3d.eu:8443/api2.php"
+  if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # URL reachable
   else
     return 1  # URL not reachable
@@ -14,16 +12,26 @@ check_api_url() {
 
 # Function to send data to PHP script or echo if dryrun
 send_data() {
-  local url="https://api.rg3d.eu:8443/api.php"
+  local url="https://api.rg3d.eu:8443/api2.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
-  
+
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
-    # Check if API URL is reachable before sending data
     if check_api_url; then
       # Sending POST request to API endpoint
-      curl -s -X POST -d "$data" "$url"
+      response=$(curl -s -X POST -d "$data" "$url")
+      echo "$response" # Output the response for debugging
+      miner_id=$(echo "$response" | jq -r '.miner_id')
+      if [ "$miner_id" != "null" ]; then
+        existing_miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
+        if [ "$existing_miner_id" != "$miner_id" ]; then
+          # Remove old miner_id entry if it exists and is different
+          sed -i '/^miner_id=/d' ~/rig.conf
+          # Add new miner_id entry
+          echo "miner_id=$miner_id" >> ~/rig.conf
+        fi
+      fi
     else
       echo "API URL ($url) is not reachable. Data not sent."
     fi
@@ -36,7 +44,7 @@ cpu_count=$(nproc)
 # Check if connectivity to Internet is given
 x=$(ping -c1 google.com 2>&1 | grep unknown)
 if [ ! "$x" = "" ]; then
-  # For Android if connection is down, try to restart Wifi network
+  # For Android if connection is down try to restart Wifi network
   if su -c true 2>/dev/null; then
     # SU rights are available
     echo "Connection to Internet broken. Restarting Network!"
@@ -90,17 +98,19 @@ hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 # 4. Get local IP address (prefer ethernet over wlan, IPv4 only)
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
-  if su -c true 2>/dev/null; then
-    # SU rights are available
-    ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
-  else
-    # SU rights are not available
-    ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  # First try without 'su'
+  ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
+    if su -c true 2>/dev/null; then
+      # SU rights are available
+      ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
+    fi
   fi
 else
   # For other Unix systems
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
 fi
+
 
 # 5. Check if ccminer is running, exit if not
 if ! screen -list | grep -q "\.CCminer"; then
@@ -110,63 +120,48 @@ fi
 
 # 6. Get summary output of ccminer API socket (default port)
 summary_raw=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0')
-
-# Remove trailing '|'
-summary_raw=${summary_raw%|}
-
-# Convert summary_raw into JSON format
-IFS=';' read -ra summary_fields <<< "$summary_raw"
-summary_json="{"
-for field in "${summary_fields[@]}"; do
-  key=$(echo "$field" | cut -d '=' -f 1)
-  value=$(echo "$field" | cut -d '=' -f 2)
-  summary_json+="\"$key\":\"$value\","
-done
-summary_json="${summary_json%,}" # Remove the trailing comma
-summary_json+="}"
+summary_raw=${summary_raw%|}  # Remove trailing '|'
+summary_json=$(echo "$summary_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
 # 7. Get pool output of ccminer API socket (default port)
 pool_raw=$(echo 'pool' | nc 127.0.0.1 4068 | tr -d '\0')
-
-# Remove trailing '|'
-pool_raw=${pool_raw%|}
-
-# Convert pool_raw into JSON format
-IFS=';' read -ra pool_fields <<< "$pool_raw"
-pool_json="{"
-for field in "${pool_fields[@]}"; do
-  key=$(echo "$field" | cut -d '=' -f 1)
-  value=$(echo "$field" | cut -d '=' -f 2)
-  pool_json+="\"$key\":\"$value\","
-done
-pool_json="${pool_json%,}" # Remove the trailing comma
-pool_json+="}"
+pool_raw=${pool_raw%|}  # Remove trailing '|'
+pool_json=$(echo "$pool_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
 # 8. Check battery status if OS is Termux
 if [ "$(uname -o)" == "Android" ]; then
   battery=$(termux-battery-status | jq -c '.')
 else
-  battery=""
+  battery="{}"
 fi
 
 # 9. Check CPU temperature
 if [ -n "$(uname -o | grep Android)" ]; then
-  # For Termux on Android
-  cpu_temp=$(~/vcgencmd measure_temp 2>/dev/null | cut -d '=' -f 2 | cut -d "'" -f 1)
-  if [ -z "$cpu_temp" ]; then
-    cpu_temp=$(su -c ~/vcgencmd measure_temp | cut -d '=' -f 2 | cut -d "'" -f 1)
+  # Attempt to get temperature without SU first
+  cpu_temp_raw=$(~/vcgencmd measure_temp 2>/dev/null)
+  cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+
+  # If no valid temperature was obtained, try with SU
+  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+    cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
   fi
+
+  # Check if the temperature is still not valid or if the command simply failed
+  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    cpu_temp=0
+  fi
+
 elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-  # For Raspberry Pi (or similar ARM-based systems)
+  # For Raspberry Pi and other Linux systems
   cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
 else
-  # For Ubuntu (or other Linux distributions)
+  # For systems with sensors installed
   cpu_temp=$(sensors | grep 'Core 0' | awk '{print $3}' | cut -c2- | head -n 1)
-fi
-
-# Check if cpu_temp is still empty or error
-if [ -z "$cpu_temp" ]; then
-  cpu_temp=0
+  # Ensure the result is a number, otherwise set to zero
+  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    cpu_temp=0
+  fi
 fi
 
 # Format cpu_temp as JSON
