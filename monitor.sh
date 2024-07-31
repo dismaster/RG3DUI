@@ -3,7 +3,9 @@
 # Function to check if API URL is reachable
 check_api_url() {
   local url="https://api.rg3d.eu:8443/api.php"
-  if curl --output /dev/null --silent --head --fail "$url"; then
+  # Try to establish connection with a timeout and limit total time
+  if curl --output /dev/null --silent --head --fail \
+      --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # URL reachable
   else
     return 1  # URL not reachable
