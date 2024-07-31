@@ -15,7 +15,7 @@ check_api_url() {
 # Function to send data to PHP script or echo if dryrun
 send_data() {
   local url="https://api.rg3d.eu:8443/api.php"
-  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&password=$rig_pw"
+  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
   
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
@@ -29,6 +29,9 @@ send_data() {
     fi
   fi
 }
+
+# Get the number of CPUs
+cpu_count=$(nproc)
 
 # Check if connectivity to Internet is given
 x=$(ping -c1 google.com 2>&1 | grep unknown)
