@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Function to check if API URL is reachable
+check_api_url() {
+  local url="https://api.rg3d.eu:8443/api.php"
+  if curl --output /dev/null --silent --head --fail "$url"; then
+    return 0  # URL reachable
+  else
+    return 1  # URL not reachable
+  fi
+}
+
 # Function to send data to PHP script or echo if dryrun
 send_data() {
   local url="https://api.rg3d.eu:8443/api.php"
@@ -8,8 +18,13 @@ send_data() {
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
-    # Sending POST request to API endpoint
-    curl -s -X POST -d "$data" "$url"
+    # Check if API URL is reachable before sending data
+    if check_api_url; then
+      # Sending POST request to API endpoint
+      curl -s -X POST -d "$data" "$url"
+    else
+      echo "API URL ($url) is not reachable. Data not sent."
+    fi
   fi
 }
 
