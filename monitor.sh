@@ -2,7 +2,7 @@
 
 # Function to check if API URL is reachable
 check_api_url() {
-  local url="https://api.rg3d.eu:8443/api.php"
+  local url="https://api.rg3d.eu:8443/api2.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # URL reachable
   else
@@ -12,26 +12,19 @@ check_api_url() {
 
 # Function to send data to PHP script or echo if dryrun
 send_data() {
-  local url="https://api.rg3d.eu:8443/api.php"
+  local url="https://api.rg3d.eu:8443/api2.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
+  
+  if [ -n "$miner_id" ]; then
+    data+="&miner_id=$miner_id"
+  fi
 
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
     if check_api_url; then
       # Sending POST request to API endpoint
-      response=$(curl -s -X POST -d "$data" "$url")
-      echo "$response" # Output the response for debugging
-      miner_id=$(echo "$response" | jq -r '.miner_id')
-      if [ "$miner_id" != "null" ]; then
-        existing_miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
-        if [ "$existing_miner_id" != "$miner_id" ]; then
-          # Remove old miner_id entry if it exists and is different
-          sed -i '/^miner_id=/d' ~/rig.conf
-          # Add new miner_id entry
-          echo "miner_id=$miner_id" >> ~/rig.conf
-        fi
-      fi
+      curl -s -X POST -d "$data" "$url"
     else
       echo "API URL ($url) is not reachable. Data not sent."
     fi
@@ -64,6 +57,7 @@ fi
 # 1. Check if ~/rig.conf exists and rig_pw is set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
+  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   if [ -z "$rig_pw" ]; then
     echo "rig_pw not set in ~/rig.conf. Exiting."
     exit 1
@@ -111,7 +105,6 @@ else
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
 fi
 
-
 # 5. Check if ccminer is running, exit if not
 if ! screen -list | grep -q "\.CCminer"; then
   echo "ccminer not running. Exiting."
@@ -138,7 +131,7 @@ fi
 # 9. Check CPU temperature
 if [ -n "$(uname -o | grep Android)" ]; then
   # Attempt to get temperature without SU first
-  cpu_temp_raw=$(~/vcgencmd measure_temp 2>/dev/null)
+  cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
   cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
 
   # If no valid temperature was obtained, try with SU
