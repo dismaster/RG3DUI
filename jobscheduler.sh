@@ -37,12 +37,39 @@ restart_ccminer() {
   screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
 }
 
+# Function to check internet connection and restart WiFi if down
+check_internet_connection() {
+  x=$(ping -c1 google.com 2>&1 | grep unknown)
+  if [ ! "$x" = "" ]; then
+    debug "Internet is down! Attempting to restart network."
+    if [ -n "$(uname -o | grep Android)" ]; then
+      if su -c true 2>/dev/null; then
+        # SU rights are available
+        su -c input keyevent 26
+        su -c svc wifi disable
+        su -c svc wifi enable
+      else
+        debug "No root access to restart WiFi on Android."
+      fi
+    elif [ -n "$(uname -m | grep arm)" ]; then
+      # For Raspberry Pi (assuming Debian-based OS)
+      sudo ifconfig wlan0 down
+      sudo ifconfig wlan0 up
+    else
+      debug "Unsupported device for network restart."
+    fi
+  fi
+}
+
 # Read rig_pw and miner_id from ~/rig.conf
 rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 
 # Get the IP address
 miner_ip=$(get_ip_address)
+
+# Check internet connection
+check_internet_connection
 
 # Send data to PHP script and get response
 if [ -n "$miner_id" ]; then
