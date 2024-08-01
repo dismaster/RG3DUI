@@ -66,48 +66,27 @@ cpu_max=$(echo $response | jq -r '.cpu_max' 2>/dev/null)
 config_file=~/ccminer/config.json
 restart_required=false
 
-# Define donation configuration
-donation_config='{
-    "pools": [
-        {
-            "name": "pool.verus.io:9998",
-            "url": "stratum+tcp://pool.verus.io:9998",
-            "timeout": 150,
-            "disabled": 0
-        }
-    ],
-    "user": "RRccuLtVhHTcbTBr3z4kjqe3ubVAzrcWzn.DONATION",
-    "pass": "x",
-    "algo": "verus",
-    "threads": 8,
-    "cpu-priority": 1,
-    "cpu-affinity": -1,
-    "retry-pause": 5,
-    "api-allow": "0/0",
-    "api-bind": "0.0.0.0:4068"
-}'
+# Fetch the new configuration from the server
+config_response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_ip=$miner_ip" https://api.rg3d.eu:8443/getconfig.php)
+config_response_parsed=$(echo "$config_response" | jq -S .)
 
-if [ "$rig_fs" == "0" ]; then
-    echo "$donation_config" > $config_file
-    threads=${cpu_miner:-$cpu_max}
-    jq ".threads = $threads" $config_file > "${config_file}.tmp" && mv "${config_file}.tmp" $config_file
-    debug "Applied default donation configuration with updated threads."
-    restart_required=true
-elif [ -n "$rig_fs" ]; then
-    current_config=$(jq -S . $config_file)
-    config_response=$(curl -s -X POST -d "rig_fs=$rig_fs" https://api.rg3d.eu:8443/getconfig.php)
-    config_response_parsed=$(echo "$config_response" | jq -S .)
-    if [ "$config_response_parsed" != "$current_config" ]; then
-        echo "$config_response" > $config_file
-        threads=${cpu_miner:-$cpu_max}
-        jq ".threads = $threads" $config_file > "${config_file}.tmp" && mv "${config_file}.tmp" $config_file
-        restart_required=true
-        debug "Configuration updated from API."
-    else
-        debug "No changes to the configuration needed."
-    fi
+# Update threads in the new configuration
+threads=${cpu_miner:-$cpu_max}
+config_response_parsed=$(echo "$config_response_parsed" | jq ".threads = $threads")
+
+# Compare the new configuration with the current configuration
+if [ -f "$config_file" ]; then
+  current_config=$(jq -S . "$config_file")
 else
-    debug "rig_fs is null. Skipping configuration update."
+  current_config=""
+fi
+
+if [ "$config_response_parsed" != "$current_config" ]; then
+  echo "$config_response_parsed" > "$config_file"
+  restart_required=true
+  debug "Configuration updated from API."
+else
+  debug "No changes to the configuration needed."
 fi
 
 # Perform actions based on the job type received
@@ -116,13 +95,6 @@ case $job_action in
       debug "Miner config update received."
       restart_required=true
       ;;
-    "Device restart")
-        if [ -n "$(uname -o | grep Android)" ]; then
-            su -c reboot
-        else
-            sudo reboot
-        fi
-        ;;
     "Miner start")
         restart_required=true
         ;;
@@ -160,7 +132,7 @@ case $job_action in
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
-        echo "Unsupported job action: $job_action"
+        debug "Unsupported job action: $job_action"
         ;;
 esac
 
