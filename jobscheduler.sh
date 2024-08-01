@@ -169,11 +169,11 @@ if [ "$job_id" != "null" ] && [ -n "$job_id" ]; then
       chmod +x ~/jobscheduler.sh
       ;;
     "Monitoring Software update")
-      if [ -f ~/monitoring.sh ]; then
-        rm ~/monitoring.sh
+      if [ -f ~/monitor.sh ]; then
+        rm ~/monitor.sh
       fi
-      wget -q -O ~/monitoring.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
-      chmod +x ~/monitoring.sh
+      wget -q -O ~/monitor.sh https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh
+      chmod +x ~/monitor.sh
       ;;
     "Termux Boot update")
       if [ -f ~/.termux/boot/boot_start ]; then
