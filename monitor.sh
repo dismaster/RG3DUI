@@ -15,6 +15,11 @@ send_data() {
   local url="https://api.rg3d.eu:8443/api.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
 
+  # Append miner_id to data if it's set
+  if [ -n "$miner_id" ]; then
+    data+="&miner_id=$miner_id"
+  fi
+
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
@@ -24,13 +29,13 @@ send_data() {
       echo "Response from server: $response"
 
       # Extracting miner_id from the response
-      miner_id=$(echo "$response" | jq -r '.miner_id')
+      new_miner_id=$(echo "$response" | jq -r '.miner_id')
 
       # Check if miner_id is valid and update rig.conf
-      if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
-        update_rig_conf "$miner_id"
+      if [[ "$new_miner_id" =~ ^[0-9]+$ ]]; then
+        update_rig_conf "$new_miner_id"
       else
-        echo "Invalid miner_id received: $miner_id"
+        echo "Invalid miner_id received: $new_miner_id"
       fi
     else
       echo "API URL ($url) is not reachable. Data not sent."
@@ -81,6 +86,7 @@ fi
 # 1. Check if ~/rig.conf exists and rig_pw is set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
+  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   if [ -z "$rig_pw" ]; then
     echo "rig_pw not set in ~/rig.conf. Exiting."
     exit 1
