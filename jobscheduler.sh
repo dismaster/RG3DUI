@@ -93,7 +93,7 @@ if [ "$rig_fs" == "0" ]; then
     jq ".threads = $threads" $config_file > "${config_file}.tmp" && mv "${config_file}.tmp" $config_file
     debug "Applied default donation configuration with updated threads."
     restart_required=true
-else
+elif [ -n "$rig_fs" ]; then
     current_config=$(jq -S . $config_file)
     config_response=$(curl -s -X POST -d "rig_fs=$rig_fs" https://api.rg3d.eu:8443/getconfig.php)
     config_response_parsed=$(echo "$config_response" | jq -S .)
@@ -106,6 +106,8 @@ else
     else
         debug "No changes to the configuration needed."
     fi
+else
+    debug "rig_fs is null. Skipping configuration update."
 fi
 
 # Perform actions based on the job type received
