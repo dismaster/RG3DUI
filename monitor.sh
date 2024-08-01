@@ -2,7 +2,7 @@
 
 # Function to check if API URL is reachable
 check_api_url() {
-  local url="https://api.rg3d.eu:8443/api2.php"
+  local url="https://api.rg3d.eu:8443/api.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # URL reachable
   else
@@ -12,7 +12,7 @@ check_api_url() {
 
 # Function to send data to PHP script or echo if dryrun
 send_data() {
-  local url="https://api.rg3d.eu:8443/api2.php"
+  local url="https://api.rg3d.eu:8443/api.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
   
   if [ -n "$miner_id" ]; then
