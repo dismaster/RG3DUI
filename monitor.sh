@@ -2,7 +2,7 @@
 
 # Function to check if API URL is reachable
 check_api_url() {
-  local url="https://api.rg3d.eu:8443/api.php"
+  local url="https://api.rg3d.eu:8443/api2.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # URL reachable
   else
@@ -12,22 +12,46 @@ check_api_url() {
 
 # Function to send data to PHP script or echo if dryrun
 send_data() {
-  local url="https://api.rg3d.eu:8443/api.php"
+  local url="https://api.rg3d.eu:8443/api2.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
-  
-  if [ -n "$miner_id" ]; then
-    data+="&miner_id=$miner_id"
-  fi
 
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
     if check_api_url; then
-      # Sending POST request to API endpoint
-      curl -s -X POST -d "$data" "$url"
+      # Sending POST request to API endpoint and capturing response
+      response=$(curl -s -X POST -d "$data" "$url")
+      echo "Response from server: $response"
+
+      # Extracting miner_id from the response
+      miner_id=$(echo "$response" | jq -r '.miner_id')
+
+      # Check if miner_id is valid and update rig.conf
+      if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
+        update_rig_conf "$miner_id"
+      else
+        echo "Invalid miner_id received: $miner_id"
+      fi
     else
       echo "API URL ($url) is not reachable. Data not sent."
     fi
+  fi
+}
+
+# Function to update rig.conf with miner_id
+update_rig_conf() {
+  local miner_id=$1
+  local rig_conf_path=~/rig.conf
+
+  if [ -f "$rig_conf_path" ]; then
+    if grep -q "miner_id=" "$rig_conf_path"; then
+      sed -i "s/miner_id=.*/miner_id=$miner_id/" "$rig_conf_path"
+    else
+      echo "miner_id=$miner_id" >> "$rig_conf_path"
+    fi
+  else
+    echo "rig.conf file not found. Creating a new one."
+    echo "miner_id=$miner_id" > "$rig_conf_path"
   fi
 }
 
@@ -57,7 +81,6 @@ fi
 # 1. Check if ~/rig.conf exists and rig_pw is set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
-  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   if [ -z "$rig_pw" ]; then
     echo "rig_pw not set in ~/rig.conf. Exiting."
     exit 1
