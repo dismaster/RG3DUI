@@ -15,7 +15,6 @@ send_data() {
   local url="https://api.rg3d.eu:8443/api.php"
   local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
 
-  # Append miner_id to data if it's set
   if [ -n "$miner_id" ]; then
     data+="&miner_id=$miner_id"
   fi
@@ -29,13 +28,13 @@ send_data() {
       echo "Response from server: $response"
 
       # Extracting miner_id from the response
-      new_miner_id=$(echo "$response" | jq -r '.miner_id')
+      miner_id=$(echo "$response" | jq -r '.miner_id')
 
       # Check if miner_id is valid and update rig.conf
-      if [[ "$new_miner_id" =~ ^[0-9]+$ ]]; then
-        update_rig_conf "$new_miner_id"
+      if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
+        update_rig_conf "$miner_id"
       else
-        echo "Invalid miner_id received: $new_miner_id"
+        echo "Invalid miner_id received: $miner_id"
       fi
     else
       echo "API URL ($url) is not reachable. Data not sent."
