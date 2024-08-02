@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.1"
+VERSION="1.0.2"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -43,7 +43,7 @@ get_ip_address() {
 restart_ccminer() {
   screen -S CCminer -X quit
   screen -wipe
-  pkill screen
+  killall screen
   screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
 }
 
