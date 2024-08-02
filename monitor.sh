@@ -16,7 +16,7 @@ check_api_url() {
 # Function to send data to PHP script or echo if dryrun
 send_data() {
   local url="https://api.rg3d.eu:8443/api.php"
-  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw"
+  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw&monitor_version=$VERSION&scheduler_version=$scheduler_version"
 
   if [ -n "$miner_id" ]; then
     data+="&miner_id=$miner_id"
@@ -63,7 +63,7 @@ update_rig_conf() {
 }
 
 # Get the number of CPUs
-cpu_count=$(lscpu | grep "^CPU(s):" | awk '{print $2}')
+cpu_count=$(lscpu | grep -E '^CPU\(s\):' | awk '{print $2}')
 
 # Check if connectivity to Internet is given
 x=$(ping -c1 google.com 2>&1 | grep unknown)
@@ -88,11 +88,11 @@ fi
 # 1. Check if ~/rig.conf exists and rig_pw is set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
-  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   if [ -z "$rig_pw" ]; then
     echo "rig_pw not set in ~/rig.conf. Exiting."
     exit 1
   fi
+  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
 else
   echo "~/rig.conf file not found. Exiting."
   exit 1
@@ -125,14 +125,10 @@ if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
   # First try without 'su'
   ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
-  if [ -z "$ip" ]; then
-    # If no IP address was found, try with 'ifconfig' and 'su'
-    ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
-    if [ -z "$ip" ]; then
-      if su -c true 2>/dev/null; then
-        # SU rights are available
-        ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
-      fi
+  if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
+    if su -c true 2>/dev/null; then
+      # SU rights are available
+      ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
     fi
   fi
 else
@@ -194,6 +190,9 @@ fi
 
 # Format cpu_temp as JSON
 cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
+
+# Get the scheduler version from the jobscheduler.sh file
+scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler.sh | cut -d '=' -f 2 | tr -d '"')
 
 # Send data to PHP script or echo if dryrun
 send_data
