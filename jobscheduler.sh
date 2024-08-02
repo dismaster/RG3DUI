@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -24,11 +24,11 @@ get_ip_address() {
     ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
     if [ -z "$ip" ]; then
       # If no IP address was found, try with 'ifconfig' and 'su'
-      ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+      ip=$(su -c ifconfig 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
       if [ -z "$ip" ]; then
         if su -c true 2>/dev/null; then
           # SU rights are available
-          ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
+          ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
         fi
       fi
     fi
