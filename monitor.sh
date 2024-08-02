@@ -125,7 +125,7 @@ if [ -n "$(uname -o | grep Android)" ]; then
   if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
     if su -c true 2>/dev/null; then
       # SU rights are available
-      ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
+      ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
     fi
   fi
 else
