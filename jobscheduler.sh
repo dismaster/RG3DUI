@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Version number
+VERSION="1.0.0"
+
 # Enable debugging if -debug argument is provided
 DEBUG=false
 if [ "$1" == "-debug" ]; then
