@@ -15,19 +15,24 @@ debug() {
 
 # Function to get the IP address
 get_ip_address() {
-  if [ -n "$(uname -o | grep Android)" ]; then
-    # For Android
-    if su -c true 2>/dev/null; then
-      # SU rights are available
-      ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
-    else
-      # SU rights are not available
-      ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+if [ -n "$(uname -o | grep Android)" ]; then
+  # For Android
+  # First try without 'su'
+  ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  if [ -z "$ip" ]; then
+    # If no IP address was found, try with 'ifconfig' and 'su'
+    ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+    if [ -z "$ip" ]; then
+      if su -c true 2>/dev/null; then
+        # SU rights are available
+        ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
+      fi
     fi
-  else
-    # For other Unix systems
-    ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
   fi
+else
+  # For other Unix systems
+  ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
+fi
   echo $ip
 }
 
