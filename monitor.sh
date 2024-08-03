@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.1"
+VERSION="1.0.2"
 
 # Function to check if API URL is reachable
 check_api_url() {
@@ -124,7 +124,8 @@ hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
   # First try without 'su'
-  ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  # old: ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
   if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
     if su -c true 2>/dev/null; then
       # SU rights are available
@@ -133,7 +134,8 @@ if [ -n "$(uname -o | grep Android)" ]; then
   fi
 else
   # For other Unix systems
-  ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
+  # ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
+  ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
 fi
 
 # 5. Check if ccminer is running, exit if not
