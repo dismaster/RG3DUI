@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.3"
+VERSION="1.0.4"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -18,28 +18,25 @@ debug() {
 
 # Function to get the IP address
 get_ip_address() {
-if [ -n "$(uname -o | grep Android)" ]; then
-  # For Android
-  # First try without 'su'
-  # old: ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
-  ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
-  if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
-    if su -c true 2>/dev/null; then
-      # SU rights are available
-      ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  if [ -n "$(uname -o | grep Android)" ]; then
+    # For Android
+    # First try without 'su'
+    # ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+    ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
+    if [ -z "$ip" ]; then
+      # If no IP address was found, try with 'ifconfig' and 'su'
+      ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+      if [ -z "$ip" ]; then
+        if su -c true 2>/dev/null; then
+          # SU rights are available
+          ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
+        fi
+      fi
     fi
+  else
+    # For other Unix systems
+    ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
   fi
-else
-  # For other Unix systems
-  ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
-  # ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
-fi
-
-# 5. Check if ccminer is running, exit if not
-if ! screen -list | grep -q "\.CCminer"; then
-  echo "ccminer not running. Exiting."
-  exit 1
-fi
   echo $ip
 }
 
@@ -47,7 +44,6 @@ fi
 restart_ccminer() {
   screen -S CCminer -X quit
   screen -wipe
-  killall screen
   screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
 }
 
@@ -109,7 +105,7 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 # Fetch the new configuration from the server
-config_response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_ip=$miner_ip" https://api.rg3d.eu:8443/getconfig.php)
+config_response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_ip=$miner_ip&miner_id=$miner_id" https://api.rg3d.eu:8443/getconfig.php)
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
