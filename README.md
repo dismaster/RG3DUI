@@ -4,6 +4,8 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 
 [Mining GUI](https://api.rg3d.eu:8443)
 
+[Discord](https://discord.gg/P5BmXK8dkp)
+
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
