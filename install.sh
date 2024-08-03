@@ -203,6 +203,9 @@ if [[ $(uname -o) == "Android" ]]; then
     add_to_crontab jobscheduler.sh
     add_to_crontab monitor.sh
 
+    adb shell
+    return
+    
 elif [[ $(uname -m) == "aarch64"* ]]; then
     # Assuming Raspberry Pi OS
     echo -e "${R}->${NC} Detected OS: SBC${NC}"
