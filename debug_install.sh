@@ -70,7 +70,7 @@ download_and_make_executable() {
     fi
 
     log "Downloading $url to $filename"
-    curl -sSL $url -o $filename
+    wget -q $url -O $filename
     if [ $? -eq 0 ]; then
         chmod +x $filename
         log "Downloaded and made executable: $filename"
@@ -210,7 +210,7 @@ if [[ $(uname -o) == "Android" ]]; then
 
         # Change directory to ~/.termux/boot and download boot_start script
         log "Downloading boot_start script"
-        run_command curl -sSL https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -o ~/.termux/boot/boot_start
+        run_command wget -q https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -O ~/.termux/boot/boot_start
 
         # Make boot_start script executable
         log "Making boot_start script executable"
@@ -222,7 +222,7 @@ if [[ $(uname -o) == "Android" ]]; then
 
         # Download ccminer and make it executable, overwrite if exists
         log "Downloading ccminer"
-        run_command curl -sSL https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -o ~/ccminer/ccminer
+        run_command wget -q https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -O ~/ccminer/ccminer
         run_command chmod +x ~/ccminer/ccminer
 
         # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
@@ -342,6 +342,8 @@ run_command rm install.sh
 
 # Start mining instance
 run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+run_command ./monitor.sh
+run_command ./jobscheduler.sh
 
 # Success message
 echo -e "${LG}->${NC} Installation completed and mining started.${NC}"
