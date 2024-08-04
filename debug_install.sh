@@ -156,9 +156,6 @@ function add_to_crontab {
     (crontab -l | grep -v "$script" ; echo "* * * * * ~/$script") | crontab - >/dev/null 2>&1
     log "Added $script to crontab."
 
-    # Start the script immediately after adding to crontab
-    log "Starting $script."
-    run_command ~/$script
 }
 
 # Function to add scripts to crontab
@@ -344,8 +341,6 @@ run_command rm debug_install.sh
 
 # Start mining instance
 run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
-run_command ./monitor.sh
-run_command ./jobscheduler.sh
 
 # Success message
 echo -e "${LG}->${NC} Installation completed and mining started.${NC}"
