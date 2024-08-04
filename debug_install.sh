@@ -18,7 +18,7 @@ P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
 # Log file location
-LOG_FILE="~/gui_setup.log"
+LOG_FILE="gui_setup.log"
 
 # Logging function
 log() {
