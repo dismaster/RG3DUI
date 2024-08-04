@@ -240,8 +240,9 @@ if [[ $(uname -o) == "Android" ]]; then
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
-        adb shell
-        return
+        # Start adb shell in a subshell
+        (adb shell)
+        exit 0
     elif command -v proot > /dev/null 2>&1; then
         log "Running on UserLAnd"
         # Update and upgrade packages
@@ -277,8 +278,9 @@ if [[ $(uname -o) == "Android" ]]; then
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
-        adb shell
-        return
+        # Start adb shell in a subshell
+        (adb shell)
+        exit 0
     else
         log "Neither Termux nor UserLAnd detected, exiting"
         echo -e "${R}->${NC} Neither Termux nor UserLAnd detected. Please run this script in a Termux or UserLAnd environment.${NC}"
@@ -338,7 +340,7 @@ else
 fi
 
 # Remove installation script
-run_command rm install.sh
+run_command rm debug_install.sh
 
 # Start mining instance
 run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
