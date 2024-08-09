@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.4"
+VERSION="1.0.5"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -20,8 +20,6 @@ debug() {
 get_ip_address() {
   if [ -n "$(uname -o | grep Android)" ]; then
     # For Android
-    # First try without 'su'
-    # ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
     ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
     if [ -z "$ip" ]; then
       # If no IP address was found, try with 'ifconfig' and 'su'
@@ -72,6 +70,21 @@ check_internet_connection() {
   fi
 }
 
+# Function to perform a curl request with fallback to --insecure if the initial request fails
+curl_request() {
+  local url="$1"
+  local data="$2"
+  
+  # Attempt with SSL verification
+  response=$(curl -s -X POST -d "$data" "$url")
+  if [ $? -ne 0 ]; then
+    debug "SSL verification failed, retrying with --insecure option."
+    response=$(curl --insecure -s -X POST -d "$data" "$url")
+  fi
+  
+  echo "$response"
+}
+
 # Read rig_pw and miner_id from ~/rig.conf
 rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
@@ -82,12 +95,12 @@ miner_ip=$(get_ip_address)
 # Check internet connection
 check_internet_connection
 
+# Prepare POST data
+post_data="rig_pw=$rig_pw&miner_ip=$miner_ip"
+[ -n "$miner_id" ] && post_data+="&miner_id=$miner_id"
+
 # Send data to PHP script and get response
-if [ -n "$miner_id" ]; then
-  response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_id=$miner_id&miner_ip=$miner_ip" https://api.rg3d.eu:8443/checkjob.php)
-else
-  response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_ip=$miner_ip" https://api.rg3d.eu:8443/checkjob.php)
-fi
+response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
 
 # Debugging output
 debug "Version: $VERSION"
@@ -106,7 +119,7 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 # Fetch the new configuration from the server
-config_response=$(curl -s -X POST -d "rig_pw=$rig_pw&miner_ip=$miner_ip&miner_id=$miner_id" https://api.rg3d.eu:8443/getconfig.php)
+config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
@@ -145,7 +158,7 @@ case $job_action in
         ;;
     "Miner software update")
         screen -S CCminer -X quit
-        wget -q -O ~/ccminer/ccminer "$job_settings"
+        wget --insecure -q -O ~/ccminer/ccminer "$job_settings"
         chmod +x ~/ccminer/ccminer
         restart_required=true
         ;;
@@ -153,21 +166,21 @@ case $job_action in
         if [ -f ~/jobscheduler.sh ]; then
             rm ~/jobscheduler.sh
         fi
-        wget -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
+        wget --insecure -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
         chmod +x ~/jobscheduler.sh
         ;;
     "Monitoring Software update")
         if [ -f ~/monitor.sh ]; then
             rm ~/monitor.sh
         fi
-        wget -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
+        wget --insecure -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
         chmod +x ~/monitor.sh
         ;;
     "Termux Boot update")
         if [ -f ~/.termux/boot/boot_start ]; then
             rm ~/.termux/boot/boot_start
         fi
-        wget -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
+        wget --insecure -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
@@ -177,7 +190,7 @@ esac
 
 # Notify the server about job completion
 if [ -n "$job_id" ]; then
-    complete_response=$(curl -s -X POST -d "job_id=$job_id" https://api.rg3d.eu:8443/completejob.php)
+    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" "job_id=$job_id")
     if [ $? -ne 0 ]; then
         debug "Failed to send job completion notification"
     fi
