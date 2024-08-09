@@ -4,7 +4,7 @@
 clear 
 
 # Installer version
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -59,6 +59,22 @@ echo  # New line for spacing
 echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
 echo  # New line for spacing
 
+# Function to check if curl works properly with SSL
+check_curl_ssl() {
+    log "Checking if curl works with SSL..."
+    curl -sI https://www.google.com > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log "curl is working properly with SSL."
+        CURL_CMD="curl -sSL"
+    else
+        log "curl is not working properly with SSL, switching to --insecure mode."
+        CURL_CMD="curl -sSL --insecure"
+    fi
+}
+
+# Run the curl check
+check_curl_ssl
+
 # Function to download a file and make it executable, overwrite if exists
 download_and_make_executable() {
     local url=$1
@@ -70,7 +86,7 @@ download_and_make_executable() {
     fi
 
     log "Downloading $url to $filename"
-    wget -q $url -O $filename
+    $CURL_CMD $url -o $filename
     if [ $? -eq 0 ]; then
         chmod +x $filename
         log "Downloaded and made executable: $filename"
