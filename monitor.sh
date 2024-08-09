@@ -1,15 +1,17 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.2"
+VERSION="1.0.3"
 
-# Function to check if API URL is reachable
-check_api_url() {
+# Function to check if SSL connection is possible
+check_ssl_support() {
   local url="https://api.rg3d.eu:8443/api.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
-    return 0  # URL reachable
+    echo "ssl_supported=true" >> ~/rig.conf
+    ssl_supported=true
   else
-    return 1  # URL not reachable
+    echo "ssl_supported=false" >> ~/rig.conf
+    ssl_supported=false
   fi
 }
 
@@ -25,22 +27,22 @@ send_data() {
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
   else
-    if check_api_url; then
-      # Sending POST request to API endpoint and capturing response
+    if [ "$ssl_supported" == true ]; then
       response=$(curl -s -X POST -d "$data" "$url")
-      echo "Response from server: $response"
-
-      # Extracting miner_id from the response
-      miner_id=$(echo "$response" | jq -r '.miner_id')
-
-      # Check if miner_id is valid and update rig.conf
-      if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
-        update_rig_conf "$miner_id"
-      else
-        echo "Invalid miner_id received: $miner_id"
-      fi
     else
-      echo "API URL ($url) is not reachable. Data not sent."
+      response=$(curl --insecure -s -X POST -d "$data" "$url")
+    fi
+    
+    echo "Response from server: $response"
+
+    # Extracting miner_id from the response
+    miner_id=$(echo "$response" | jq -r '.miner_id')
+
+    # Check if miner_id is valid and update rig.conf
+    if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
+      update_rig_conf "$miner_id"
+    else
+      echo "Invalid miner_id received: $miner_id"
     fi
   fi
 }
@@ -93,12 +95,18 @@ if [ -f ~/rig.conf ]; then
     exit 1
   fi
   miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
+  ssl_supported=$(grep -E "^ssl_supported=" ~/rig.conf | cut -d '=' -f 2)
 else
   echo "~/rig.conf file not found. Exiting."
   exit 1
 fi
 
-# 2. Check hardware brand and format to uppercase
+# 2. Check SSL support if not already determined
+if [ -z "$ssl_supported" ]; then
+  check_ssl_support
+fi
+
+# 3. Check hardware brand and format to uppercase
 if [ -f /sys/firmware/devicetree/base/model ]; then
   hw_brand=$(cat /sys/firmware/devicetree/base/model | awk '{print $1}' | tr '[:lower:]' '[:upper:]')
 elif [ -n "$(uname -o | grep Android)" ]; then
@@ -110,7 +118,7 @@ else
   hw_brand=$(uname -o | tr '[:lower:]' '[:upper:]')
 fi
 
-# 3. Check hardware model and format to uppercase
+# 4. Check hardware model and format to uppercase
 if [ -f /sys/firmware/devicetree/base/model ]; then
   hw_model=$(cat /sys/firmware/devicetree/base/model | awk '{print $2 $3}')
 elif [ -n "$(uname -o | grep Android)" ]; then
@@ -120,11 +128,9 @@ else
 fi
 hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 
-# 4. Get local IP address (prefer ethernet over wlan, IPv4 only)
+# 5. Get local IP address (prefer ethernet over wlan, IPv4 only)
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
-  # First try without 'su'
-  # old: ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
   ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
   if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
     if su -c true 2>/dev/null; then
@@ -135,33 +141,32 @@ if [ -n "$(uname -o | grep Android)" ]; then
 else
   # For other Unix systems
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
-  # ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
 fi
 
-# 5. Check if ccminer is running, exit if not
+# 6. Check if ccminer is running, exit if not
 if ! screen -list | grep -q "\.CCminer"; then
   echo "ccminer not running. Exiting."
   exit 1
 fi
 
-# 6. Get summary output of ccminer API socket (default port)
+# 7. Get summary output of ccminer API socket (default port)
 summary_raw=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0')
 summary_raw=${summary_raw%|}  # Remove trailing '|'
 summary_json=$(echo "$summary_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
-# 7. Get pool output of ccminer API socket (default port)
+# 8. Get pool output of ccminer API socket (default port)
 pool_raw=$(echo 'pool' | nc 127.0.0.1 4068 | tr -d '\0')
 pool_raw=${pool_raw%|}  # Remove trailing '|'
 pool_json=$(echo "$pool_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
-# 8. Check battery status if OS is Termux
+# 9. Check battery status if OS is Termux
 if [ "$(uname -o)" == "Android" ]; then
   battery=$(termux-battery-status | jq -c '.')
 else
   battery="{}"
 fi
 
-# 9. Check CPU temperature
+# 10. Check CPU temperature
 if [ -n "$(uname -o | grep Android)" ]; then
   # Attempt to get temperature without SU first
   cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
