@@ -1,17 +1,15 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.3"
+VERSION="1.0.4"
 
-# Function to check if SSL connection is possible
+# Function to check if API URL is reachable with SSL
 check_ssl_support() {
   local url="https://api.rg3d.eu:8443/api.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
-    echo "ssl_supported=true" >> ~/rig.conf
-    ssl_supported=true
+    return 0  # SSL supported
   else
-    echo "ssl_supported=false" >> ~/rig.conf
-    ssl_supported=false
+    return 1  # SSL not supported
   fi
 }
 
@@ -26,28 +24,26 @@ send_data() {
 
   if [ "$dryrun" == true ]; then
     echo "curl -s -X POST -d \"$data\" \"$url\""
-  else
-    if [ "$ssl_supported" == true ]; then
-      response=$(curl -s -X POST -d "$data" "$url")
-    else
-      response=$(curl --insecure -s -X POST -d "$data" "$url")
-    fi
-    
+  elif [ "$ssl_supported" == "true" ]; then
+    response=$(curl -s -X POST -d "$data" "$url")
     echo "Response from server: $response"
+  else
+    response=$(curl -s -k -X POST -d "$data" "$url")
+    echo "Response from server (insecure): $response"
+  fi
 
-    # Extracting miner_id from the response
-    miner_id=$(echo "$response" | jq -r '.miner_id')
+  # Extracting miner_id from the response
+  miner_id=$(echo "$response" | jq -r '.miner_id')
 
-    # Check if miner_id is valid and update rig.conf
-    if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
-      update_rig_conf "$miner_id"
-    else
-      echo "Invalid miner_id received: $miner_id"
-    fi
+  # Check if miner_id is valid and update rig.conf
+  if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
+    update_rig_conf "$miner_id"
+  else
+    echo "Invalid miner_id received: $miner_id"
   fi
 }
 
-# Function to update rig.conf with miner_id
+# Function to update rig.conf with miner_id and ssl_supported
 update_rig_conf() {
   local miner_id=$1
   local rig_conf_path=~/rig.conf
@@ -58,11 +54,34 @@ update_rig_conf() {
     else
       echo "miner_id=$miner_id" >> "$rig_conf_path"
     fi
+
+    if grep -q "ssl_supported=" "$rig_conf_path"; then
+      sed -i "s/ssl_supported=.*/ssl_supported=$ssl_supported/" "$rig_conf_path"
+    else
+      echo "ssl_supported=$ssl_supported" >> "$rig_conf_path"
+    fi
   else
     echo "rig.conf file not found. Creating a new one."
     echo "miner_id=$miner_id" > "$rig_conf_path"
+    echo "ssl_supported=$ssl_supported" >> "$rig_conf_path"
   fi
 }
+
+# Determine SSL support and update rig.conf only if not already set
+ssl_supported="false"
+if [ -f ~/rig.conf ]; then
+  ssl_supported=$(grep -E "^ssl_supported=" ~/rig.conf | cut -d '=' -f 2)
+fi
+
+if [ -z "$ssl_supported" ]; then
+  if check_ssl_support; then
+    ssl_supported="true"
+  else
+    ssl_supported="false"
+  fi
+  # Update rig.conf with the SSL support status
+  update_rig_conf "$miner_id"
+fi
 
 # Get the number of CPUs
 cpu_count=$(lscpu | grep -E '^CPU\(s\):' | awk '{print $2}')
@@ -95,18 +114,12 @@ if [ -f ~/rig.conf ]; then
     exit 1
   fi
   miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
-  ssl_supported=$(grep -E "^ssl_supported=" ~/rig.conf | cut -d '=' -f 2)
 else
   echo "~/rig.conf file not found. Exiting."
   exit 1
 fi
 
-# 2. Check SSL support if not already determined
-if [ -z "$ssl_supported" ]; then
-  check_ssl_support
-fi
-
-# 3. Check hardware brand and format to uppercase
+# 2. Check hardware brand and format to uppercase
 if [ -f /sys/firmware/devicetree/base/model ]; then
   hw_brand=$(cat /sys/firmware/devicetree/base/model | awk '{print $1}' | tr '[:lower:]' '[:upper:]')
 elif [ -n "$(uname -o | grep Android)" ]; then
@@ -118,7 +131,7 @@ else
   hw_brand=$(uname -o | tr '[:lower:]' '[:upper:]')
 fi
 
-# 4. Check hardware model and format to uppercase
+# 3. Check hardware model and format to uppercase
 if [ -f /sys/firmware/devicetree/base/model ]; then
   hw_model=$(cat /sys/firmware/devicetree/base/model | awk '{print $2 $3}')
 elif [ -n "$(uname -o | grep Android)" ]; then
@@ -128,9 +141,10 @@ else
 fi
 hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 
-# 5. Get local IP address (prefer ethernet over wlan, IPv4 only)
+# 4. Get local IP address (prefer ethernet over wlan, IPv4 only)
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
+  # First try without 'su'
   ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
   if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
     if su -c true 2>/dev/null; then
@@ -143,30 +157,34 @@ else
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
 fi
 
-# 6. Check if ccminer is running, exit if not
+# 5. Check if ccminer is running, exit if not
 if ! screen -list | grep -q "\.CCminer"; then
   echo "ccminer not running. Exiting."
   exit 1
 fi
 
-# 7. Get summary output of ccminer API socket (default port)
+# 6. Get summary output of ccminer API socket (default port)
 summary_raw=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0')
 summary_raw=${summary_raw%|}  # Remove trailing '|'
 summary_json=$(echo "$summary_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
-# 8. Get pool output of ccminer API socket (default port)
+# 7. Get pool output of ccminer API socket (default port)
 pool_raw=$(echo 'pool' | nc 127.0.0.1 4068 | tr -d '\0')
 pool_raw=${pool_raw%|}  # Remove trailing '|'
 pool_json=$(echo "$pool_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
-# 9. Check battery status if OS is Termux
+# 8. Check battery status if OS is Termux
 if [ "$(uname -o)" == "Android" ]; then
-  battery=$(termux-battery-status | jq -c '.')
+  # Check if the battery command returns a value within 2 seconds
+  battery=$(timeout 2s termux-battery-status | jq -c '.')
+  if [ -z "$battery" ]; then
+    battery="{}"
+  fi
 else
   battery="{}"
 fi
 
-# 10. Check CPU temperature
+# 9. Check CPU temperature
 if [ -n "$(uname -o | grep Android)" ]; then
   # Attempt to get temperature without SU first
   cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
