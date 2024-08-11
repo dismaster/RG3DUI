@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.6"
+VERSION="1.0.7"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -85,6 +85,18 @@ curl_request() {
   echo "$response"
 }
 
+# Function to perform a wget request with SSL fallback
+wget_request() {
+  local url="$1"
+  local output="$2"
+  
+  wget -q -O "$output" "$url"
+  if [ $? -ne 0 ]; then
+    debug "SSL verification failed, retrying with --no-check-certificate option."
+    wget --no-check-certificate -q -O "$output" "$url"
+  fi
+}
+
 # Read rig_pw and miner_id from ~/rig.conf
 rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
@@ -158,7 +170,7 @@ case $job_action in
         ;;
     "Miner software update")
         screen -S CCminer -X quit
-        wget -k -q -O ~/ccminer/ccminer "$job_settings"
+        wget_request "$job_settings" ~/ccminer/ccminer
         chmod +x ~/ccminer/ccminer
         restart_required=true
         ;;
@@ -166,21 +178,21 @@ case $job_action in
         if [ -f ~/jobscheduler.sh ]; then
             rm ~/jobscheduler.sh
         fi
-        wget -k -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
+        wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh" ~/jobscheduler.sh
         chmod +x ~/jobscheduler.sh
         ;;
     "Monitoring Software update")
         if [ -f ~/monitor.sh ]; then
             rm ~/monitor.sh
         fi
-        wget -k -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
+        wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh" ~/monitor.sh
         chmod +x ~/monitor.sh
         ;;
     "Termux Boot update")
         if [ -f ~/.termux/boot/boot_start ]; then
             rm ~/.termux/boot/boot_start
         fi
-        wget -k -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
+        wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start" ~/.termux/boot/boot_start
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
