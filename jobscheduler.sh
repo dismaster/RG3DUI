@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.5"
+VERSION="1.0.6"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -79,7 +79,7 @@ curl_request() {
   response=$(curl -s -X POST -d "$data" "$url")
   if [ $? -ne 0 ]; then
     debug "SSL verification failed, retrying with --insecure option."
-    response=$(curl --insecure -s -X POST -d "$data" "$url")
+    response=$(curl -k -s -X POST -d "$data" "$url")
   fi
   
   echo "$response"
@@ -158,7 +158,7 @@ case $job_action in
         ;;
     "Miner software update")
         screen -S CCminer -X quit
-        wget --insecure -q -O ~/ccminer/ccminer "$job_settings"
+        wget -k -q -O ~/ccminer/ccminer "$job_settings"
         chmod +x ~/ccminer/ccminer
         restart_required=true
         ;;
