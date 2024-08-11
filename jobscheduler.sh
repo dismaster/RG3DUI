@@ -77,18 +77,25 @@ check_ssl_support() {
   fi
 }
 
-# Function to perform a curl request based on SSL support
+# Function to perform a curl request based on SSL support with HTML content check
 curl_request() {
   local url="$1"
-  local data="$2"
+  local output="$2"
   
   if [ "$ssl_supported" = true ]; then
-    response=$(curl -s -X POST -d "$data" "$url")
+    curl -s -o "$output" "$url"
   else
-    response=$(curl -s -k -X POST -d "$data" "$url")
+    curl -s -k -o "$output" "$url"
   fi
   
-  echo "$response"
+  # Check if the downloaded file is HTML (which might indicate an error)
+  if grep -q "<html" "$output"; then
+    debug "Error: Downloaded content is HTML. Possibly an error page."
+    rm "$output"
+    return 1
+  fi
+  
+  return 0
 }
 
 # Read rig_pw and miner_id from ~/rig.conf
@@ -114,11 +121,17 @@ post_data="rig_pw=$rig_pw&miner_ip=$miner_ip"
 [ -n "$miner_id" ] && post_data+="&miner_id=$miner_id"
 
 # Send data to PHP script and get response
-response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
+response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" response.txt)
+if [ $? -ne 0 ]; then
+  debug "Failed to retrieve job data."
+  exit 1
+fi
 
 # Debugging output
 debug "Version: $VERSION"
-debug "Response from API: $response"
+debug "Response from API: $(cat response.txt)"
+response=$(cat response.txt)
+rm response.txt
 
 # Parse response
 job_id=$(echo $response | jq -r '.job_id' 2>/dev/null)
@@ -133,7 +146,15 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 # Fetch the new configuration from the server
-config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
+curl_request "https://api.rg3d.eu:8443/getconfig.php" config_response.txt
+if [ $? -ne 0 ]; then
+  debug "Failed to retrieve configuration."
+  exit 1
+fi
+
+config_response=$(cat config_response.txt)
+rm config_response.txt
+
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
@@ -172,7 +193,7 @@ case $job_action in
         ;;
     "Miner software update")
         screen -S CCminer -X quit
-        curl_request "$job_settings" > ~/ccminer/ccminer
+        curl_request "$job_settings" ~/ccminer/ccminer
         chmod +x ~/ccminer/ccminer
         restart_required=true
         ;;
@@ -180,21 +201,21 @@ case $job_action in
         if [ -f ~/jobscheduler.sh ]; then
             rm ~/jobscheduler.sh
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh" > ~/jobscheduler.sh
+        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh" ~/jobscheduler.sh
         chmod +x ~/jobscheduler.sh
         ;;
     "Monitoring Software update")
         if [ -f ~/monitor.sh ]; then
             rm ~/monitor.sh
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh" > ~/monitor.sh
+        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh" ~/monitor.sh
         chmod +x ~/monitor.sh
         ;;
     "Termux Boot update")
         if [ -f ~/.termux/boot/boot_start ]; then
             rm ~/.termux/boot/boot_start
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start" > ~/.termux/boot/boot_start
+        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start" ~/.termux/boot/boot_start
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
@@ -204,11 +225,12 @@ esac
 
 # Notify the server about job completion
 if [ -n "$job_id" ]; then
-    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" "job_id=$job_id")
+    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" complete_response.txt)
     if [ $? -ne 0 ]; then
         debug "Failed to send job completion notification"
     fi
     debug "Job successfully completed."
+    rm complete_response.txt
 else
     debug "No valid job_id received from API"
 fi
