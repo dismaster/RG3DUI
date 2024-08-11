@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.7"
+VERSION="1.0.6"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -19,16 +19,20 @@ debug() {
 # Function to get the IP address
 get_ip_address() {
   if [ -n "$(uname -o | grep Android)" ]; then
+    # For Android
     ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
     if [ -z "$ip" ]; then
+      # If no IP address was found, try with 'ifconfig' and 'su'
       ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
       if [ -z "$ip" ]; then
         if su -c true 2>/dev/null; then
+          # SU rights are available
           ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
         fi
       fi
     fi
   else
+    # For other Unix systems
     ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
   fi
   echo $ip
@@ -49,6 +53,7 @@ check_internet_connection() {
     debug "Internet is down! Attempting to restart network."
     if [ -n "$(uname -o | grep Android)" ]; then
       if su -c true 2>/dev/null; then
+        # SU rights are available
         su -c input keyevent 26
         su -c svc wifi disable
         su -c svc wifi enable
@@ -56,6 +61,7 @@ check_internet_connection() {
         debug "No root access to restart WiFi on Android."
       fi
     elif [ -n "$(uname -m | grep arm)" ]; then
+      # For Raspberry Pi (assuming Debian-based OS)
       sudo ifconfig wlan0 down
       sudo ifconfig wlan0 up
     else
@@ -64,51 +70,24 @@ check_internet_connection() {
   fi
 }
 
-# Function to determine if SSL is supported and update rig.conf
-check_ssl_support() {
-  local url="https://api.rg3d.eu:8443/checkjob.php"
-  curl -s --connect-timeout 2 "$url" > /dev/null
-  if [ $? -eq 0 ]; then
-    echo "ssl_supported=true" >> ~/rig.conf
-    echo true
-  else
-    echo "ssl_supported=false" >> ~/rig.conf
-    echo false
-  fi
-}
-
-# Function to perform a curl request based on SSL support with HTML content check
+# Function to perform a curl request with fallback to --insecure if the initial request fails
 curl_request() {
   local url="$1"
-  local output="$2"
+  local data="$2"
   
-  if [ "$ssl_supported" = true ]; then
-    curl -s -o "$output" "$url"
-  else
-    curl -s -k -o "$output" "$url"
+  # Attempt with SSL verification
+  response=$(curl -s -X POST -d "$data" "$url")
+  if [ $? -ne 0 ]; then
+    debug "SSL verification failed, retrying with --insecure option."
+    response=$(curl -k -s -X POST -d "$data" "$url")
   fi
   
-  # Check if the downloaded file is HTML (which might indicate an error)
-  if grep -q "<html" "$output"; then
-    debug "Error: Downloaded content is HTML. Possibly an error page."
-    rm "$output"
-    return 1
-  fi
-  
-  return 0
+  echo "$response"
 }
 
 # Read rig_pw and miner_id from ~/rig.conf
 rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
-ssl_supported=$(grep 'ssl_supported' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
-
-# Check and update SSL support if not already defined
-if [ -z "$ssl_supported" ]; then
-  debug "Determining SSL support..."
-  ssl_supported=$(check_ssl_support)
-  debug "SSL support: $ssl_supported"
-fi
 
 # Get the IP address
 miner_ip=$(get_ip_address)
@@ -121,17 +100,11 @@ post_data="rig_pw=$rig_pw&miner_ip=$miner_ip"
 [ -n "$miner_id" ] && post_data+="&miner_id=$miner_id"
 
 # Send data to PHP script and get response
-response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" response.txt)
-if [ $? -ne 0 ]; then
-  debug "Failed to retrieve job data."
-  exit 1
-fi
+response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
 
 # Debugging output
 debug "Version: $VERSION"
-debug "Response from API: $(cat response.txt)"
-response=$(cat response.txt)
-rm response.txt
+debug "Response from API: $response"
 
 # Parse response
 job_id=$(echo $response | jq -r '.job_id' 2>/dev/null)
@@ -146,15 +119,7 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 # Fetch the new configuration from the server
-curl_request "https://api.rg3d.eu:8443/getconfig.php" config_response.txt
-if [ $? -ne 0 ]; then
-  debug "Failed to retrieve configuration."
-  exit 1
-fi
-
-config_response=$(cat config_response.txt)
-rm config_response.txt
-
+config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
@@ -193,7 +158,7 @@ case $job_action in
         ;;
     "Miner software update")
         screen -S CCminer -X quit
-        curl_request "$job_settings" ~/ccminer/ccminer
+        wget -k -q -O ~/ccminer/ccminer "$job_settings"
         chmod +x ~/ccminer/ccminer
         restart_required=true
         ;;
@@ -201,21 +166,21 @@ case $job_action in
         if [ -f ~/jobscheduler.sh ]; then
             rm ~/jobscheduler.sh
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh" ~/jobscheduler.sh
+        wget -k -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
         chmod +x ~/jobscheduler.sh
         ;;
     "Monitoring Software update")
         if [ -f ~/monitor.sh ]; then
             rm ~/monitor.sh
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh" ~/monitor.sh
+        wget -k -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
         chmod +x ~/monitor.sh
         ;;
     "Termux Boot update")
         if [ -f ~/.termux/boot/boot_start ]; then
             rm ~/.termux/boot/boot_start
         fi
-        curl_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start" ~/.termux/boot/boot_start
+        wget -k -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
@@ -225,12 +190,11 @@ esac
 
 # Notify the server about job completion
 if [ -n "$job_id" ]; then
-    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" complete_response.txt)
+    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" "job_id=$job_id")
     if [ $? -ne 0 ]; then
         debug "Failed to send job completion notification"
     fi
     debug "Job successfully completed."
-    rm complete_response.txt
 else
     debug "No valid job_id received from API"
 fi
