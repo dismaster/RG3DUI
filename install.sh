@@ -4,7 +4,7 @@
 clear 
 
 # Installer version
-VERSION="1.0.1"
+VERSION="1.0.2"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
