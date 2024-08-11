@@ -203,7 +203,7 @@ if [[ $(uname -o) == "Android" ]]; then
     log "Detected OS: Android"
     echo -e "${R}->${NC} Detected OS: Android${NC}"
     
-    log "Checking for Termux or UserLAnd"
+    log "Checking for Termux"
     if command -v termux-info > /dev/null 2>&1; then
         log "Running on Termux"
         # Update and upgrade packages
@@ -259,47 +259,9 @@ if [[ $(uname -o) == "Android" ]]; then
         # Start adb shell in a subshell
         (adb shell)
         exit 0
-    elif command -v proot > /dev/null 2>&1; then
-        log "Running on UserLAnd"
-        # Update and upgrade packages
-        log "Updating and upgrading packages"
-        run_command apt-get update
-        run_command apt-get upgrade -y
-
-        # Install required packages
-        log "Installing required packages"
-        run_command apt-get install -y cron git wget nano screen openssh-server jq iproute2 netcat gawk
-
-        # Create ~/ccminer folder if not exists
-        log "Creating ~/ccminer folder"
-        run_command mkdir -p ~/ccminer
-
-        # Download ccminer and make it executable, overwrite if exists
-        log "Downloading ccminer"
-        run_command wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
-        run_command chmod +x ~/ccminer/ccminer
-
-        # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
-        log "Downloading and setting up jobscheduler.sh, monitor.sh, and vcgencmd"
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
-        
-        # Install default config for DONATION
-        log "Downloading default config"
-        run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
-        
-        # Add jobscheduler.sh and monitor.sh to crontab
-        log "Adding jobscheduler.sh and monitor.sh to crontab"
-        add_to_crontab jobscheduler.sh
-        add_to_crontab monitor.sh
-
-        # Start adb shell in a subshell
-        (adb shell)
-        exit 0
     else
-        log "Neither Termux nor UserLAnd detected, exiting"
-        echo -e "${R}->${NC} Neither Termux nor UserLAnd detected. Please run this script in a Termux or UserLAnd environment.${NC}"
+        log "Termux not detected, exiting"
+        echo -e "${R}->${NC} Termux not detected. Please run this script in a Termux environment.${NC}"
         exit 1
     fi
     
@@ -308,10 +270,10 @@ else
     echo -e "${R}->${NC} Detected OS: $(uname -o)${NC}"
     echo -e "${R}->${NC} ${LC}You might get asked for SUDO password - required for Updates${NC}"
 
-    # Check if the system is an SBC (e.g., Raspberry Pi, Orange Pi)
-    if grep -q "Raspberry" /proc/device-tree/model || grep -q "Orange" /proc/device-tree/model || grep -q "Rockchip" /proc/device-tree/model; then
-        log "Detected SBC device"
-        echo -e "${R}->${NC} Detected SBC device${NC}"
+    # Check if the system is an SBC (e.g., Raspberry Pi, Orange Pi) or ARM-based
+    if grep -q "Raspberry" /proc/device-tree/model || grep -q "Orange" /proc/device-tree/model || grep -q "Rockchip" /proc/device-tree/model || lscpu | grep -q "ARM"; then
+        log "Detected SBC or ARM-based device"
+        echo -e "${R}->${NC} Detected SBC or ARM-based device${NC}"
 
         # Check if the system is Raspberry Pi Zero 2W
         if grep -q "Raspberry Pi Zero 2 W" /proc/device-tree/model; then
