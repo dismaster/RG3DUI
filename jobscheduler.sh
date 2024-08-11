@@ -166,21 +166,21 @@ case $job_action in
         if [ -f ~/jobscheduler.sh ]; then
             rm ~/jobscheduler.sh
         fi
-        wget --insecure -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
+        wget -k -q -O ~/jobscheduler.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh"
         chmod +x ~/jobscheduler.sh
         ;;
     "Monitoring Software update")
         if [ -f ~/monitor.sh ]; then
             rm ~/monitor.sh
         fi
-        wget --insecure -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
+        wget -k -q -O ~/monitor.sh "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh"
         chmod +x ~/monitor.sh
         ;;
     "Termux Boot update")
         if [ -f ~/.termux/boot/boot_start ]; then
             rm ~/.termux/boot/boot_start
         fi
-        wget --insecure -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
+        wget -k -q -O ~/.termux/boot/boot_start "https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start"
         chmod +x ~/.termux/boot/boot_start
         ;;
     *)
