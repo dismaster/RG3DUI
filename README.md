@@ -10,6 +10,7 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
 3. [Configuration](#configuration)
+4. [Information](#information)
 
 ## Prerequisites
 
@@ -33,4 +34,11 @@ curl -O https://raw.githubusercontent.com/dismaster/RG3DUI/main/install.sh >/dev
 
 After installation, the scripts will populate any required configuration according to your RIG configuration itself
 
-HAPPY MINING!
+#### Information
+
+The GUI is being updated in specific time frames!
+
+1. Rig Details: every 2 minute(s)
+2. Miner Details: every 1 minute(s)
+
+# HAPPY MINING!
