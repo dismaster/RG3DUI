@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.7"
+VERSION="1.0.9"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -122,9 +122,12 @@ debug "Response from API: $response"
 job_id=$(echo $response | jq -r '.job_id' 2>/dev/null)
 job_action=$(echo $response | jq -r '.job_action' 2>/dev/null)
 job_settings=$(echo $response | jq -r '.job_settings' 2>/dev/null)
-rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null)
+rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null || echo "null")
 cpu_miner=$(echo $response | jq -r '.cpu_miner' 2>/dev/null)
 cpu_max=$(echo $response | jq -r '.cpu_max' 2>/dev/null)
+
+# Debug rig_fs value
+debug "rig_fs value: $rig_fs"
 
 # Handle flightsheet configuration
 config_file=~/ccminer/config.json
