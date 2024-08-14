@@ -15,24 +15,27 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
-- **Operating System**: Linux with 64bit CPU, mining capable ARM SBC, mining capable Phone with Userland Termux installed (including termux-api and termux-boot)
-- **RIG Password**: Add a RIG in the GUI to get the password generated
+- **Device**: Mining Cabable Phone or ARM SBC 64 bit CPU and Operating System
+- **Operating System**: Linux if you are on an SBC, Userland or Termux (including termux-api and termux-boot) if you are on android.
+- **RIG Password**: Add a RIG in the GUI to get the password generated (Details in [Installation](#installation)).
 
 ## Installation
 
-Follow these steps to install the Mining Monitoring on your system:
+Go to [Rig Overview](https://api.rg3d.eu:8443/rig_overview.php) and add a rig, **Make Sure to Document the Password!**
 
-### Download and Run the Installation Script
+### Follow these steps to install the Mining System on your Phone/SBC:
 
 Open your terminal and execute the following command:
 
 ```sh
 curl -O https://raw.githubusercontent.com/dismaster/RG3DUI/main/install.sh >/dev/null 2>&1 && chmod +x install.sh && ./install.sh
 ```
+Enter the password you obtained when adding the rig to the dashboard.
 
 #### Configuration
 
-After installation, the scripts will populate any required configuration according to your RIG configuration itself
+After installation, the scripts will populate any required configuration according to your RIG configuration itself.
+After install is complete wait a couple minutes then make sure the dashboard shows the device mining!
 
 #### Information
 
