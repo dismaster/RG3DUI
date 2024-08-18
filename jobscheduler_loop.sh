@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.9"
+VERSION="1.1.0"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -70,18 +70,34 @@ check_internet_connection() {
   fi
 }
 
-# Function to perform a curl request with fallback to --insecure if the initial request fails
+# Function to perform a curl request with SSL support check
 curl_request() {
   local url="$1"
   local data="$2"
   
-  # Attempt with SSL verification
-  response=$(curl -s -X POST -d "$data" "$url")
-  if [ $? -ne 0 ]; then
-    debug "SSL verification failed, retrying with --insecure option."
+  # Read SSL support status from rig.conf
+  ssl_supported=$(grep 'ssl_supported' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
+  
+  # Check if ssl_supported is set, if not, determine and set it
+  if [ -z "$ssl_supported" ]; then
+    debug "SSL support not found in rig.conf. Checking SSL support..."
+    response=$(curl -s -X POST -d "$data" "$url")
+    if [ $? -eq 0 ]; then
+      ssl_supported=true
+    else
+      ssl_supported=false
+    fi
+    echo "ssl_supported=$ssl_supported" >> ~/rig.conf
+    debug "SSL support status set to $ssl_supported in rig.conf."
+  fi
+
+  # Make the curl request based on SSL support status
+  if [ "$ssl_supported" = true ]; then
+    response=$(curl -s -X POST -d "$data" "$url")
+  else
     response=$(curl -k -s -X POST -d "$data" "$url")
   fi
-  
+
   echo "$response"
 }
 
@@ -97,14 +113,15 @@ wget_request() {
   fi
 }
 
-# Main loop to run every minute
-while true; do
-  # Read rig_pw and miner_id from ~/rig.conf
-  rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
-  miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
+# Read rig_pw and miner_id from ~/rig.conf
+rig_pw=$(grep 'rig_pw' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
+miner_id=$(grep 'miner_id' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
 
-  # Get the IP address
-  miner_ip=$(get_ip_address)
+# Get the IP address
+miner_ip=$(get_ip_address)
+
+# Main loop
+while true; do
 
   # Check internet connection
   check_internet_connection
@@ -115,6 +132,13 @@ while true; do
 
   # Send data to PHP script and get response
   response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
+
+  # Check if response is empty or null
+  if [ -z "$response" ]; then
+    debug "Failed to reach API or empty response. Keeping the miner running."
+    sleep 60
+    continue
+  fi
 
   # Debugging output
   debug "Version: $VERSION"
@@ -180,18 +204,18 @@ while true; do
           restart_required=true
           ;;
       "Management script update")
-          if [ -f ~/jobscheduler.sh ]; then
-              rm ~/jobscheduler.sh
+          if [ -f ~/jobscheduler_loop.sh ]; then
+              rm ~/jobscheduler_loop.sh
           fi
-          wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh" ~/jobscheduler.sh
-          chmod +x ~/jobscheduler.sh
+          wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler_loop.sh" ~/jobscheduler_loop.sh
+          chmod +x ~/jobscheduler_loop.sh
           ;;
       "Monitoring Software update")
-          if [ -f ~/monitor.sh ]; then
-              rm ~/monitor.sh
+          if [ -f ~/monitor_loop.sh ]; then
+              rm ~/monitor_loop.sh
           fi
-          wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh" ~/monitor.sh
-          chmod +x ~/monitor.sh
+          wget_request "https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor_loop.sh" ~/monitor_loop.sh
+          chmod +x ~/monitor_loop.sh
           ;;
       "Termux Boot update")
           if [ -f ~/.termux/boot/boot_start ]; then
@@ -221,6 +245,7 @@ while true; do
     restart_ccminer
   fi
 
-  # Sleep for 1 minute before looping again
+  # Sleep for 1 minute before the next check
   sleep 60
+
 done
