@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.4"
+VERSION="1.0.5"
+INTERVAL=60  # Set the interval time (in seconds) between each loop iteration
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -67,8 +68,7 @@ update_rig_conf() {
   fi
 }
 
-# Function to perform the main monitoring and data collection tasks
-perform_monitoring() {
+while true; do
   # Determine SSL support and update rig.conf only if not already set
   ssl_supported="false"
   if [ -f ~/rig.conf ]; then
@@ -100,6 +100,12 @@ perform_monitoring() {
       su -c svc wifi enable
       sleep 10
     fi
+  fi
+
+  # Parse arguments
+  dryrun=false
+  if [ "$1" == "--dryrun" ]; then
+    dryrun=true
   fi
 
   # 1. Check if ~/rig.conf exists and rig_pw is set
@@ -180,30 +186,35 @@ perform_monitoring() {
     battery="{}"
   fi
 
-  # 9. Check CPU temperature
-  if [ -n "$(uname -o | grep Android)" ]; then
-    # Attempt to get temperature without SU first
-    cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
-    cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+  # 9. Check CPU temperature using the provided script
+  for cpuseq in $(seq 1 60); do
+    v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
+    v2="back_temp"
+    if [[ "$v1" == "$v2" ]]; then
+      cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
+      cpu_temp=$((cpu_temp_raw / 1000))
+      break
+    fi
+  done
 
-    # If no valid temperature was obtained, try with SU
-    if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-      cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+  # If no valid temperature was obtained from the loop, use fallback methods
+  if [ -z "$cpu_temp" ]; then
+    if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+      # For Raspberry Pi and other Linux systems
+      cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
+    elif [ -n "$(uname -o | grep Android)" ]; then
+      # Attempt to get temperature without SU first
+      cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
       cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+
+      # If no valid temperature was obtained, try with SU
+      if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+        cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+      fi
     fi
 
-    # Check if the temperature is still not valid or if the command simply failed
-    if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-      cpu_temp=0
-    fi
-
-  elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-    # For Raspberry Pi and other Linux systems
-    cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
-  else
-    # For systems with sensors installed
-    cpu_temp=$(sensors | grep 'Core 0' | awk '{print $3}' | cut -c2- | head -n 1)
-    # Ensure the result is a number, otherwise set to zero
+    # If the temperature is still not valid or if the command simply failed
     if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
       cpu_temp=0
     fi
@@ -212,15 +223,13 @@ perform_monitoring() {
   # Format cpu_temp as JSON
   cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
 
-  # Get the scheduler version from the jobscheduler.sh file
-  scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler.sh | cut -d '=' -f 2 | tr -d '"')
+  # Get the scheduler version from the jobscheduler_loop.sh file
+  scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler_loop.sh | cut -d '=' -f 2 | tr -d '"')
 
   # Send data to PHP script or echo if dryrun
   send_data
-}
 
-# Main loop
-while true; do
-  perform_monitoring
-  sleep 60  # Sleep for 60 seconds before next iteration
+  # Wait for the specified interval before the next iteration
+  sleep $INTERVAL
+
 done
