@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.9"
+VERSION="1.1.0"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -70,18 +70,34 @@ check_internet_connection() {
   fi
 }
 
-# Function to perform a curl request with fallback to --insecure if the initial request fails
+# Function to perform a curl request with SSL support check
 curl_request() {
   local url="$1"
   local data="$2"
   
-  # Attempt with SSL verification
-  response=$(curl -s -X POST -d "$data" "$url")
-  if [ $? -ne 0 ]; then
-    debug "SSL verification failed, retrying with --insecure option."
+  # Read SSL support status from rig.conf
+  ssl_supported=$(grep 'ssl_supported' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
+  
+  # Check if ssl_supported is set, if not, determine and set it
+  if [ -z "$ssl_supported" ]; then
+    debug "SSL support not found in rig.conf. Checking SSL support..."
+    response=$(curl -s -X POST -d "$data" "$url")
+    if [ $? -eq 0 ]; then
+      ssl_supported=true
+    else
+      ssl_supported=false
+    fi
+    echo "ssl_supported=$ssl_supported" >> ~/rig.conf
+    debug "SSL support status set to $ssl_supported in rig.conf."
+  fi
+
+  # Make the curl request based on SSL support status
+  if [ "$ssl_supported" = true ]; then
+    response=$(curl -s -X POST -d "$data" "$url")
+  else
     response=$(curl -k -s -X POST -d "$data" "$url")
   fi
-  
+
   echo "$response"
 }
 
@@ -113,6 +129,12 @@ post_data="rig_pw=$rig_pw&miner_ip=$miner_ip"
 
 # Send data to PHP script and get response
 response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
+
+# Check if response is empty or null
+if [ -z "$response" ]; then
+  debug "Failed to reach API or empty response. Keeping the miner running."
+  exit 0
+fi
 
 # Debugging output
 debug "Version: $VERSION"
