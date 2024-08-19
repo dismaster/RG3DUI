@@ -258,7 +258,7 @@ while true; do
 
   # Get the scheduler version from the jobscheduler.sh file
   scheduler_version_start_time=$(date +%s%N)
-  scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler.sh | cut -d '=' -f 2 | tr -d '"')
+  scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler_loop.sh | cut -d '=' -f 2 | tr -d '"')
   measure_time "Scheduler version check" $scheduler_version_start_time
 
   # Send data to PHP script or echo if dryrun
