@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.6"
+VERSION="1.0.7"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -185,27 +185,31 @@ else
 fi
 
 # 9. Check CPU temperature
-cpu_temp=0  # Initialize the variable to a default value
+cpu_temp=0
 
-if [ -n "$(uname -o | grep Android)" ]; then
-  # Use the provided script to find the temperature sensor for the CPU
-  for cpuseq in $(seq 1 60)
-  do
-    v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
-    v2="back_temp"
-    if [[ "$v1" == "$v2" ]]; then
-      cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
-      cpu_temp=$((cpu_temp_raw / 1000))
-      break
-    fi
-  done
-elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-  # For Raspberry Pi and other Linux systems
-  cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
-else
-  # For systems with sensors installed
-  cpu_temp=$(sensors | grep 'Core 0' | awk '{print $3}' | cut -c2- | head -n 1)
-  # Ensure the result is a number, otherwise set to zero
+# First check for Raspberry Pi or other Linux systems
+for cpuseq in $(seq 1 60); do
+  v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
+  v2="back_temp"
+  if [[ "$v1" == "$v2" ]]; then
+    cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
+    cpu_temp=$((cpu_temp_raw / 1000))
+    break
+  fi
+done
+
+# If no valid temperature was obtained, check for Android
+if [ "$cpu_temp" -eq 0 ] && [ -n "$(uname -o | grep Android)" ]; then
+  cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
+  cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+
+  # If no valid temperature was obtained, try with SU
+  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+    cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+  fi
+
+  # Check if the temperature is still not valid or if the command simply failed
   if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
     cpu_temp=0
   fi
