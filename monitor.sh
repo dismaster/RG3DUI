@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.7"
+VERSION="1.0.8"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -187,32 +187,42 @@ fi
 # 9. Check CPU temperature
 cpu_temp=0
 
-# First check for Raspberry Pi or other Linux systems
-for cpuseq in $(seq 1 60); do
-  v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
-  v2="back_temp"
-  if [[ "$v1" == "$v2" ]]; then
-    cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
-    cpu_temp=$((cpu_temp_raw / 1000))
-    break
-  fi
-done
+# Check for Raspberry Pi or other Linux systems
+if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+  cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
+fi
 
-# If no valid temperature was obtained, check for Android
-if [ "$cpu_temp" -eq 0 ] && [ -n "$(uname -o | grep Android)" ]; then
-  cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
-  cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
-
-  # If no valid temperature was obtained, try with SU
-  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-    cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+# If still zero, check for Android devices
+if [ "$cpu_temp" == "0" ] || [ -z "$cpu_temp" ]; then
+  if [ -n "$(uname -o | grep Android)" ]; then
+    # Attempt to get temperature without SU first
+    cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
     cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
-  fi
 
-  # Check if the temperature is still not valid or if the command simply failed
-  if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-    cpu_temp=0
+    # If no valid temperature was obtained, try with SU
+    if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+      cpu_temp_raw=$(su -c ~/vcgencmd measure_temp 2>/dev/null)
+      cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
+    fi
+
+    # Check if the temperature is still not valid or if the command simply failed
+    if ! [[ "$cpu_temp" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+      cpu_temp=0
+    fi
   fi
+fi
+
+# Additional check if cpu_temp is still 0
+if [ "$cpu_temp" == "0" ] || [ -z "$cpu_temp" ]; then
+  for cpuseq in $(seq 1 60); do
+    v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
+    v2="back_temp"
+    if [[ "$v1" == "$v2" ]]; then
+      cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
+      cpu_temp=$((cpu_temp_raw / 1000))
+      break
+    fi
+  done
 fi
 
 # Format cpu_temp as JSON
