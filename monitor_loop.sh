@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.7"
+VERSION="1.0.8"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -220,23 +220,18 @@ while true; do
   fi
   measure_time "Battery status check" $battery_start_time
 
-  # 9. Check CPU temperature
-  cpu_temp_start_time=$(date +%s%N)
-  cpu_temp=0  # Initialize to 0 before checking
-  
-  # Loop through thermal zones to find the correct CPU temperature
-  for cpuseq in $(seq 1 60); do
-    v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
-    v2="back_temp"
-    if [[ "$v1" == "$v2" ]]; then
-      cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
-      cpu_temp=$((cpu_temp_raw / 1000))
-      break
-    fi
-  done
+# 9. Check CPU temperature
+cpu_temp=0
 
-  # If no valid temperature was obtained, check for Android
-  if [ "$cpu_temp" -eq 0 ] && [ -n "$(uname -o | grep Android)" ]; then
+# Check for Raspberry Pi or other Linux systems
+if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+  cpu_temp=$(awk '{printf "%.1f", $1 / 1000}' /sys/class/thermal/thermal_zone0/temp)
+fi
+
+# If still zero, check for Android devices
+if [ "$cpu_temp" == "0" ] || [ -z "$cpu_temp" ]; then
+  if [ -n "$(uname -o | grep Android)" ]; then
+    # Attempt to get temperature without SU first
     cpu_temp_raw=$("~/vcgencmd measure_temp" 2>/dev/null)
     cpu_temp=$(echo "$cpu_temp_raw" | grep -oP 'temp=\K\d+\.\d+')
 
@@ -251,10 +246,23 @@ while true; do
       cpu_temp=0
     fi
   fi
-  measure_time "CPU temperature check" $cpu_temp_start_time
+fi
 
-  # Format cpu_temp as JSON
-  cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
+# Additional check if cpu_temp is still 0
+if [ "$cpu_temp" == "0" ] || [ -z "$cpu_temp" ]; then
+  for cpuseq in $(seq 1 60); do
+    v1=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/type 2>/dev/null)
+    v2="back_temp"
+    if [[ "$v1" == "$v2" ]]; then
+      cpu_temp_raw=$(cat /sys/devices/virtual/thermal/thermal_zone$cpuseq/temp 2>/dev/null)
+      cpu_temp=$((cpu_temp_raw / 1000))
+      break
+    fi
+  done
+fi
+
+# Format cpu_temp as JSON
+cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
 
   # Get the scheduler version from the jobscheduler.sh file
   scheduler_version_start_time=$(date +%s%N)
