@@ -74,16 +74,29 @@ for i in "${!cpu_info_lines[@]}"; do
     fi
 done
 
-# Output hardware and architecture information
-echo "Hardware: $hardware"
-echo "Architecture: $architecture"
-echo
+# Prepare JSON payload
+json_payload="{\"hardware\":\"$hardware\", \"architecture\":\"$architecture\", \"cpus\":["
 
-# Output the consolidated results
+cpu_first=true
 for cpu_info in "${!cpu_khs_map[@]}"; do
+    if [ "$cpu_first" = true ]; then
+        cpu_first=false
+    else
+        json_payload+=","
+    fi
+
     khs_values=(${cpu_khs_map[$cpu_info]})
     avg_khs=$(calculate_avg_khs "${khs_values[@]}")
-    echo "CPU: $cpu_info"
-    echo "Average Hashrate: $avg_khs KHS"
-    echo
+    cpu_model=$(echo "$cpu_info" | awk -F' @ ' '{print $1}')
+    cpu_freq=$(echo "$cpu_info" | awk -F' @ ' '{print $2}' | sed 's/ MHz//')
+
+    json_payload+="{\"cpu\":\"$cpu_model\", \"frequency\":\"$cpu_freq\", \"avg_khs\":\"$avg_khs\"}"
 done
+
+json_payload+="]}"
+
+# Send JSON payload to the PHP API script
+api_url="https://api.rg3d.ru:8443/cpu_api.php"
+curl -X POST -H "Content-Type: application/json" -d "$json_payload" "$api_url"
+
+echo "Data sent to $api_url"
