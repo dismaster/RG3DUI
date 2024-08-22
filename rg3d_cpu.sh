@@ -96,7 +96,7 @@ done
 json_payload+="]}"
 
 # Send JSON payload to the PHP API script
-api_url="https://api.rg3d.ru:8443/cpu_api.php"
+api_url="https://api.rg3d.eu:8443/cpu_api.php"
 curl -X POST -H "Content-Type: application/json" -d "$json_payload" "$api_url"
 
 echo "Data sent to $api_url"
