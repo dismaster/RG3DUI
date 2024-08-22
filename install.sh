@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Clearing screen
-clear 
-
-# Installer version
-VERSION="1.0.3"
-
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
 R='\033[0;31m'   # Red
@@ -17,26 +11,7 @@ LB='\033[1;34m'  # Light Blue
 P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
-# Log file location
-LOG_FILE="gui_setup.log"
-
-# Logging function
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - v$VERSION - $@" | tee -a $LOG_FILE
-}
-
-# Function to run commands and log their output
-run_command() {
-    log "Running command: $@"
-    "$@" >> $LOG_FILE 2>&1
-    local status=$?
-    if [ $status -ne 0 ]; then
-        log "Command failed with status $status"
-    fi
-    return $status
-}
-
-# Fancy Banner with RG3D VERUS Logo
+# Fancy banner
 echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#${NC} ${LB}     __________   ________ ________  ________         ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}     \______   \ /  _____/ \_____  \ \______ \        ${LC}#${NC}"
@@ -51,290 +26,190 @@ echo -e "${LC}#${NC} ${LB}  \     /   |        \ |    |   \|    |  / /        \ 
 echo -e "${LC}#${NC} ${LB}   \___/   /_______  / |____|_  /|______/ /_______  / ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}                   \/         \/                  \/  ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#          ${LP}->${NC} ${LG}VERUS Miner SETUP${NC} by Ch3ckr ${P}<-${NC}            ${LC}#${NC}"
+echo -e "${LC}#           ${LP}->${NC} ${LG}VERUS CPU CHECK${NC} by Ch3ckr  ${P}<-${NC}            ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#${NC}              ${LG}https://api.rg3d.eu:8443${NC}                 ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
 echo  # New line for spacing
-echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
-echo  # New line for spacing
+#echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
+#echo  # New line for spacing
 
-# Function to check if curl works properly with SSL
-check_curl_ssl() {
-    log "Checking if curl works with SSL..."
-    curl -sI https://www.google.com > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-        log "curl is working properly with SSL."
-        CURL_CMD="curl -sSL"
-    else
-        log "curl is not working properly with SSL, switching to --insecure mode."
-        CURL_CMD="curl -sSL --insecure"
-    fi
-}
 
-# Run the curl check
-check_curl_ssl
+# Function to calculate average KHS
+calculate_avg_khs() {
+    local khs_values=("$@")
+    local khs_sum=0
+    local count=0
 
-# Function to download a file and make it executable, overwrite if exists
-download_and_make_executable() {
-    local url=$1
-    local filename=$2
-    local target_dir=$3
-
-    if [ ! -z "$target_dir" ]; then
-        cd $target_dir
-    fi
-
-    log "Downloading $url to $filename"
-    $CURL_CMD $url -o $filename
-    if [ $? -eq 0 ]; then
-        chmod +x $filename
-        log "Downloaded and made executable: $filename"
-    else
-        log "Failed to download $url"
-    fi
-}
-
-# Function to build ccminer from source for SBCs
-function build_ccminer_sbc {
-    log "Building CCminer for SBC..."
-    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-   
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command mkdir -p ~/ccminer
-    run_command wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
-    run_command chmod +x ~/ccminer/ccminer
-
-    # Install default config for DONATION
-    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
-}
-
-# Function to build ccminer from source for UNIX
-function build_ccminer_unix {
-    log "Building CCminer for UNIX..."
-    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command cd ~/ccminer_build 
-    run_command ./build.sh 
-    run_command cd ~/
-    
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command mkdir -p ~/ccminer
-    run_command mv ~/ccminer_build/ccminer ~/ccminer/ccminer
-    
-    # Clean up ccminer_build folder
-    run_command rm -rf ~/ccminer_build
-
-    # Install default config for DONATION
-    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
-}
-
-# Function to prompt for password with verification
-function prompt_for_password {
-    while true; do
-        echo -e "${R}->${NC} ${Y}Enter RIG Password:${NC}"
-        read -s pw1
-        echo
-        echo -e "${R}->${NC} ${Y}Confirm RIG Password:${NC}"
-        read -s pw2
-        echo
-
-        if [[ "$pw1" == "$pw2" ]]; then
-            echo "rig_pw=$pw1" > ~/rig.conf
-            log "Password set successfully."
-            break
-        else
-            log "Passwords do not match."
-            echo -e "${R}->${NC} ${R}Passwords do not match. Please try again.${NC}"
+    for value in "${khs_values[@]}"; do
+        if [[ $value =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            khs_sum=$(echo "$khs_sum + $value" | bc)
+            count=$((count + 1))
         fi
     done
-}
 
-# Function to delete ~/ccminer folder if it exists
-function delete_ccminer_folder {
-    if [ -d ~/ccminer ]; then
-        log "Deleting existing ~/ccminer folder and its contents"
-        rm -rf ~/ccminer
-    fi
-    if [ -d ~/ccminer_build ]; then
-        log "Deleting existing ~/ccminer_build folder and its contents"
-        rm -rf ~/ccminer_build
-    fi
-}
-
-# Function to add scripts to crontab
-function add_to_crontab {
-    local script=$1
-    # Remove existing entry from crontab if present
-    (crontab -l | grep -v "$script" ; echo "* * * * * ~/$script") | crontab - >/dev/null 2>&1
-    log "Added $script to crontab."
-
-    # Start the script immediately after adding to crontab
-    log "Starting $script."
-    run_command ~/$script
-}
-
-# Function to add scripts to crontab
-function start_miner_at_reboot {
-    # Remove existing entry from crontab if present
-    (crontab -l | grep -v "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
-    log "Added automated start of miner at boot."
-}
-
-# Delete existing ~/ccminer folder including files in it, if it exists
-delete_ccminer_folder
-
-# Request RIG Password from user and store in ~/rig.conf with verification
-echo -e "${R}->${NC} Please enter your RIG password.${NC}"
-prompt_for_password
-
-# Ensure rig.conf is created and contains the password
-if [ -f ~/rig.conf ]; then
-    echo -e "${LG}->${NC} Created rig.conf.${NC}"
-else
-    echo -e "${R}->${NC} Failed to create rig.conf.${NC}"
-fi
-
-# Detect OS with debugging
-if [[ $(uname -o) == "Android" ]]; then
-    log "Detected OS: Android"
-    echo -e "${R}->${NC} Detected OS: Android${NC}"
-    
-    log "Checking for Termux"
-    if command -v termux-info > /dev/null 2>&1; then
-        log "Running on Termux"
-        # Update and upgrade packages
-        log "Updating and upgrading packages"
-        run_command pkg update -y
-        run_command pkg upgrade -y
-
-        # Install required packages
-        log "Installing required packages"
-        run_command pkg install -y bc cronie termux-services termux-auth libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu android-tools
-
-        # Create ~/.termux folder if not exists
-        log "Creating ~/.termux folder"
-        run_command mkdir -p ~/.termux
-        run_command mkdir -p ~/.cache
-
-        # Create ~/.termux/boot folder if not exists
-        log "Creating ~/.termux/boot folder"
-        run_command mkdir -p ~/.termux/boot
-
-        # Change directory to ~/.termux/boot and download boot_start script
-        log "Downloading boot_start script"
-        run_command wget -q https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -O ~/.termux/boot/boot_start
-
-        # Make boot_start script executable
-        log "Making boot_start script executable"
-        run_command chmod +x ~/.termux/boot/boot_start
-
-        # Create ~/ccminer folder if not exists
-        log "Creating ~/ccminer folder"
-        run_command mkdir -p ~/ccminer
-
-        # Download ccminer and make it executable, overwrite if exists
-        log "Downloading ccminer"
-        run_command wget -q https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -O ~/ccminer/ccminer
-        run_command chmod +x ~/ccminer/ccminer
-
-        # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
-        log "Downloading and setting up jobscheduler.sh, monitor.sh, and vcgencmd"
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
-        
-        # Install default config for DONATION
-        log "Downloading default config"
-        run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
-        
-        # Add jobscheduler.sh and monitor.sh to crontab
-        log "Adding jobscheduler.sh and monitor.sh to crontab"
-        add_to_crontab jobscheduler.sh
-        add_to_crontab monitor.sh
-
-        # Start adb shell in a subshell
-        (adb shell)
-        exit 0
+    if [ $count -gt 0 ]; then
+        avg=$(echo "scale=2; $khs_sum / $count" | bc)
+        echo "$avg"
     else
-        log "Termux not detected, exiting"
-        echo -e "${R}->${NC} Termux not detected. Please run this script in a Termux environment.${NC}"
+        echo "0.00"
+    fi
+}
+
+# Detect the running environment and fetch the correct cpu_check binary if necessary
+detect_and_fetch_cpu_check() {
+    if [ -f "./cpu_check" ] && [ -x "./cpu_check" ]; then
+        cpu_check_status="exists and is executable."
+    else
+        if [ -d /data/data/com.termux/files/home ]; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm
+        elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        elif uname -a | grep -qi "android" && [ -f /etc/os-release ] && grep -qi "Ubuntu" /etc/os-release; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        elif uname -a | grep -qi "linux"; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        else
+            echo -e "\033[31mUnsupported OS. Exiting.\033[0m"
+            exit 1
+        fi
+        chmod +x cpu_check
+        cpu_check_status="downloaded and set as executable."
+    fi
+}
+
+# Ensure bc is installed
+check_and_install_bc() {
+    if ! command -v bc &> /dev/null; then
+        if [ -d /data/data/com.termux/files/home ]; then
+            pkg install bc -y
+        else
+            sudo apt-get install bc -y
+        fi
+        bc_status="installed."
+    else
+        bc_status="already installed."
+    fi
+}
+
+# Extract hardware information
+extract_hardware() {
+    ./cpu_check | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
+}
+
+# Extract architecture information
+extract_architecture() {
+    ./cpu_check | grep 'Architecture:' | sed 's/.*Architecture: //'
+}
+
+# Extract CPU information from the file and parse model and frequency
+extract_cpu_info() {
+    ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
+}
+
+# Extract KHS values based on environment
+extract_khs_values() {
+    echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
+}
+
+# Check if ccminer is running in a screen session or independently
+check_ccminer_running() {
+    if screen -list | grep -q "CCminer"; then
+        ccminer_status="running in screen session 'CCminer'."
+    elif pgrep -x "ccminer" > /dev/null; then
+        ccminer_status="running."
+    else
+        ccminer_status="not running. Exiting."
+        echo -e "\033[31m$ccminer_status\033[0m"
         exit 1
     fi
-    
-else
-    log "Detected OS: $(uname -o)"
-    echo -e "${R}->${NC} Detected OS: $(uname -o)${NC}"
-    echo -e "${R}->${NC} ${LC}You might get asked for SUDO password - required for Updates${NC}"
+}
 
-    # Check if the system is an SBC (e.g., Raspberry Pi, Orange Pi) or ARM-based
-    if grep -q "Raspberry" /proc/device-tree/model || grep -q "Orange" /proc/device-tree/model || grep -q "Rockchip" /proc/device-tree/model || lscpu | grep -q "ARM"; then
-        log "Detected SBC or ARM-based device"
-        echo -e "${R}->${NC} Detected SBC or ARM-based device${NC}"
+# Main script execution
+detect_and_fetch_cpu_check
+check_and_install_bc
+check_ccminer_running
 
-        # Check if the system is Raspberry Pi Zero 2W
-        if grep -q "Raspberry Pi Zero 2 W" /proc/device-tree/model; then
-            log "Detected Raspberry Pi Zero 2W"
-            echo -e "${R}->${NC} Detected Raspberry Pi Zero 2W${NC}"
-        fi
+hardware=$(extract_hardware)
+architecture=$(extract_architecture)
+cpu_info_raw=$(extract_cpu_info)
+khs_values_raw=$(extract_khs_values)
 
-        # Update and install necessary packages
-        run_command sudo apt-get update
-        run_command sudo apt-get install -y cron bc libomp5 git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk
-        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
+# Convert CPU info and KHS values to arrays
+IFS=$'\n' read -r -d '' -a cpu_info_lines <<<"$cpu_info_raw"
+IFS=$'\n' read -r -d '' -a khs_values <<<"$khs_values_raw"
 
-        # Build ccminer with basic configuration
-        build_ccminer_sbc
+# Check lengths
+cpu_count=${#cpu_info_lines[@]}
+khs_count=${#khs_values[@]}
 
-        # Run jobscheduler.sh and monitor.sh, overwrite if exists
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-
-        # Add jobscheduler.sh and monitor.sh to crontab
-        add_to_crontab jobscheduler.sh
-        add_to_crontab monitor.sh
-
-        # Add ccminer to start on boot
-        start_miner_at_reboot
-    else
-        log "Detected general Linux device"
-        echo -e "${R}->${NC} Detected general Linux device${NC}"
-
-        # Update and install necessary packages
-        run_command sudo apt-get update
-        run_command sudo apt-get install -y git bc libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk
-        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
-
-        # Clone CCminer repository and rename folder to ccminer, overwrite if exists
-        run_command git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
-
-        # Build ccminer with basic configuration
-        build_ccminer_unix
-
-        # Run jobscheduler.sh and monitor.sh, overwrite if exists
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-
-        # Add jobscheduler.sh and monitor.sh to crontab
-        add_to_crontab jobscheduler.sh
-        add_to_crontab monitor.sh
-
-        # Add ccminer to start on boot
-        start_miner_at_reboot
-    fi
+if [ "$cpu_count" -ne "$khs_count" ]; then
+    echo -e "\033[31mERROR: The number of CPUs does not match the number of KHS values.\033[0m"
+    exit 1
 fi
 
-# Remove installation script
-run_command rm debug_install.sh
+declare -A cpu_khs_map
 
-# Start mining instance
-run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
-run_command ./monitor.sh
-run_command ./jobscheduler.sh
+# Populate the map with KHS values grouped by CPU info
+for i in "${!cpu_info_lines[@]}"; do
+    cpu_info=${cpu_info_lines[$i]}
+    khs=${khs_values[$i]}
 
-# Success message
-echo -e "${LG}->${NC} Installation completed and mining started.${NC}"
-log "Installation completed and mining started."
+    if [ -n "${cpu_khs_map[$cpu_info]}" ]; then
+        cpu_khs_map[$cpu_info]+=" $khs"
+    else
+        cpu_khs_map[$cpu_info]=$khs
+    fi
+done
+
+# Prepare JSON payload
+json_payload="{\"hardware\":\"$hardware\", \"architecture\":\"$architecture\", \"cpus\":["
+
+cpu_first=true
+for cpu_info in "${!cpu_khs_map[@]}"; do
+    if [ "$cpu_first" = true ]; then
+        cpu_first=false
+    else
+        json_payload+=","
+    fi
+
+    khs_values=(${cpu_khs_map[$cpu_info]})
+    avg_khs=$(calculate_avg_khs "${khs_values[@]}")
+    cpu_model=$(echo "$cpu_info" | awk -F' @ ' '{print $1}')
+    cpu_freq=$(echo "$cpu_info" | awk -F' @ ' '{print $2}' | sed 's/ MHz//')
+
+    json_payload+="{\"cpu\":\"$cpu_model\", \"frequency\":\"$cpu_freq\", \"avg_khs\":\"$avg_khs\"}"
+done
+
+json_payload+="]}"
+
+# Send JSON payload to the PHP API script
+api_url="https://api.rg3d.eu:8443/cpu_api.php"
+response=$(curl -s -X POST -H "Content-Type: application/json" -d "$json_payload" "$api_url")
+
+if [[ $response == *"success"* ]]; then
+    data_status="success"
+else
+    data_status="failed"
+fi
+
+# Final user-friendly output
+echo -e "${LP}->${NC} Required Software:\033[32m $cpu_check_status\033[0m"
+echo -e "${LP}->${NC} Required Packages:\033[32m $bc_status\033[0m"
+echo -e "${LP}->${NC} CCminer:\033[32m $ccminer_status\033[0m"
+echo -e "${LP}->${NC} Data send:\033[32m $data_status\033[0m\n"
+
+# Fancy overview of what has been sent
+echo -e "${LP}->${NC} Hardware:${LP} $hardware${NC}"
+echo -e "${LP}->${NC} Architecture:${LP} $architecture${NC}"
+
+for cpu_info in "${!cpu_khs_map[@]}"; do
+    khs_values=(${cpu_khs_map[$cpu_info]})
+    avg_khs=$(calculate_avg_khs "${khs_values[@]}")
+    cpu_model=$(echo "$cpu_info" | awk -F' @ ' '{print $1}')
+    cpu_freq=$(echo "$cpu_info" | awk -F' @ ' '{print $2}')
+
+    echo -e "${LP}->${NC} CPU:${LC} $cpu_model${NC}"
+    echo -e "${LP}->${NC} Frequency:${LC} $cpu_freq${NC}"
+    echo -e "${LP}->${NC} AVG KHS:${LC} $avg_khs${NC}"
+done
