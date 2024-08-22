@@ -21,6 +21,16 @@ calculate_avg_khs() {
     fi
 }
 
+# Extract hardware information
+extract_hardware() {
+    ./cpu_check | grep 'Hardware:' | sed 's/.*Hardware: //'
+}
+
+# Extract architecture information
+extract_architecture() {
+    ./cpu_check | grep 'Architecture:' | sed 's/.*Architecture: //'
+}
+
 # Extract CPU information from the file and parse model and frequency
 extract_cpu_info() {
     ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
@@ -32,6 +42,8 @@ extract_khs_values() {
 }
 
 # Main script execution
+hardware=$(extract_hardware)
+architecture=$(extract_architecture)
 cpu_info_raw=$(extract_cpu_info)
 khs_values_raw=$(extract_khs_values)
 
@@ -62,8 +74,12 @@ for i in "${!cpu_info_lines[@]}"; do
     fi
 done
 
+# Output hardware and architecture information
+echo "Hardware: $hardware"
+echo "Architecture: $architecture"
+echo
+
 # Output the consolidated results
-echo "Consolidated CPU KHS Information:"
 for cpu_info in "${!cpu_khs_map[@]}"; do
     khs_values=(${cpu_khs_map[$cpu_info]})
     avg_khs=$(calculate_avg_khs "${khs_values[@]}")
