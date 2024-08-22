@@ -4,89 +4,70 @@
 calculate_avg_khs() {
     local khs_values=("$@")
     local khs_sum=0
-    for value in "${khs_values[@]}"; do
-        khs_sum=$(echo "$khs_sum + $value" | bc)
-    done
-    echo "scale=2; $khs_sum / ${#khs_values[@]}" | bc
-}
+    local count=0
 
-# Detect the running environment
-detect_environment() {
-    if [ -d /data/data/com.termux/files/home ]; then
-        echo "termux"
-    elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
-        echo "sbc"
-    elif uname -a | grep -qi "android"; then
-        echo "userland"
+    for value in "${khs_values[@]}"; do
+        if [[ $value =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            khs_sum=$(echo "$khs_sum + $value" | bc)
+            count=$((count + 1))
+        fi
+    done
+
+    if [ $count -gt 0 ]; then
+        avg=$(echo "scale=2; $khs_sum / $count" | bc)
+        echo "$avg"
     else
-        echo "linux"
+        echo "0.00"
     fi
 }
 
-# Extract hardware information
-extract_hardware_info() {
-    model=$(grep "Hardware" cpu_info.txt | head -n 1 | awk -F': ' '{print $2}' | xargs)
-    echo "$model"
-}
-
-# Extract CPU information from the C program's output
+# Extract CPU information from the file and parse model and frequency
 extract_cpu_info() {
-    grep "Processor" cpu_info.txt | while read -r line; do
-        model=$(echo "$line" | awk -F': ' '{print $2}' | awk -F' @' '{print $1}' | xargs)
-        freq=$(echo "$line" | awk -F' @' '{print $2}' | awk '{print $1}')
-        echo "$model:$freq"
-    done
+    ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
 }
 
 # Extract KHS values based on environment
 extract_khs_values() {
-    khs_values=$(echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}')
+    echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
 }
 
 # Main script execution
-env_type=$(detect_environment)
-echo "Detected environment: $env_type"
+cpu_info_raw=$(extract_cpu_info)
+khs_values_raw=$(extract_khs_values)
 
-# Run the C program to gather hardware and CPU information
-./cpu_check > cpu_info.txt  # Replace 'cpu_check' with the actual binary name
+# Convert CPU info and KHS values to arrays
+IFS=$'\n' read -r -d '' -a cpu_info_lines <<<"$cpu_info_raw"
+IFS=$'\n' read -r -d '' -a khs_values <<<"$khs_values_raw"
 
-# Extract hardware information
-hardware_info=$(extract_hardware_info)
+# Check lengths
+cpu_count=${#cpu_info_lines[@]}
+khs_count=${#khs_values[@]}
 
-cpu_info=($(extract_cpu_info))
-extract_khs_values
+if [ "$cpu_count" -ne "$khs_count" ]; then
+    echo "ERROR: The number of CPUs does not match the number of KHS values."
+    exit 1
+fi
 
-# Declare associative arrays to store the data
 declare -A cpu_khs_map
-declare -A cpu_freq_map
 
-# Initialize arrays with CPU information
-for (( i=0; i<${#cpu_info[@]}; i++ )); do
-    model=$(echo "${cpu_info[$i]}" | awk -F':' '{print $1}')
-    freq=$(echo "${cpu_info[$i]}" | awk -F':' '{print $2}')
-    cpu_freq_map["$model"]="$freq"
-done
+# Populate the map with KHS values grouped by CPU info
+for i in "${!cpu_info_lines[@]}"; do
+    cpu_info=${cpu_info_lines[$i]}
+    khs=${khs_values[$i]}
 
-# Assign KHS values to the corresponding CPU model
-i=0
-for khs in $khs_values; do
-    model=$(echo "${cpu_info[$i]}" | awk -F':' '{print $1}')
-    if [ -n "${cpu_khs_map[$model]}" ]; then
-        cpu_khs_map[$model]+=" $khs"
+    if [ -n "${cpu_khs_map[$cpu_info]}" ]; then
+        cpu_khs_map[$cpu_info]+=" $khs"
     else
-        cpu_khs_map[$model]="$khs"
+        cpu_khs_map[$cpu_info]=$khs
     fi
-    i=$((i + 1))
 done
 
-# Output the summary
-echo "Hardware: $hardware_info"
-for model in "${!cpu_khs_map[@]}"; do
-    khs_list=(${cpu_khs_map[$model]})
-    avg_khs=$(calculate_avg_khs "${khs_list[@]}")
-    freq=${cpu_freq_map[$model]}
-    echo "CPU Model: $model"
-    echo "Frequency: $freq MHz"
+# Output the consolidated results
+echo "Consolidated CPU KHS Information:"
+for cpu_info in "${!cpu_khs_map[@]}"; do
+    khs_values=(${cpu_khs_map[$cpu_info]})
+    avg_khs=$(calculate_avg_khs "${khs_values[@]}")
+    echo "CPU: $cpu_info"
     echo "Average Hashrate: $avg_khs KHS"
     echo
 done
