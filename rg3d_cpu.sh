@@ -1,5 +1,45 @@
 #!/bin/bash
 
+# Function to determine the operating system
+detect_os() {
+    if [ -f /data/data/com.termux/files/usr/bin/bash ]; then
+        echo "termux"
+    elif [ -f /usr/bin/lsb_release ]; then
+        if lsb_release -a | grep -q "Ubuntu"; then
+            echo "userland_ubuntu"
+        else
+            echo "unsupported"
+        fi
+    elif [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [[ "$ID" == "raspbian" || "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
+            echo "sbc"
+        else
+            echo "unsupported"
+        fi
+    else
+        echo "unsupported"
+    fi
+}
+
+# Function to download the appropriate cpu_check file
+download_cpu_check() {
+    local os_type=$1
+    case "$os_type" in
+        termux)
+            curl -s -o cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm
+            ;;
+        userland_ubuntu | sbc)
+            curl -s -o cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+            ;;
+        *)
+            echo "Unsupported OS or environment."
+            exit 1
+            ;;
+    esac
+    chmod +x cpu_check
+}
+
 # Function to calculate average KHS
 calculate_avg_khs() {
     local khs_values=("$@")
@@ -21,35 +61,36 @@ calculate_avg_khs() {
     fi
 }
 
-# Extract hardware information
-extract_hardware() {
-    ./cpu_check | grep 'Hardware:' | sed 's/.*Hardware: //'
-}
-
-# Extract architecture information
-extract_architecture() {
-    ./cpu_check | grep 'Architecture:' | sed 's/.*Architecture: //'
-}
-
-# Extract CPU information from the file and parse model and frequency
+# Function to extract CPU information from the file and parse model and frequency
 extract_cpu_info() {
     ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
 }
 
-# Extract KHS values based on environment
+# Function to extract KHS values based on environment
 extract_khs_values() {
     echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
 }
 
+# Function to extract hardware and architecture
+extract_system_info() {
+    local hardware architecture
+    hardware=$(./cpu_check | grep 'Hardware' | awk -F': ' '{print $2}' | xargs)
+    architecture=$(./cpu_check | grep 'Architecture' | awk -F': ' '{print $2}' | xargs)
+    echo "$hardware $architecture"
+}
+
 # Main script execution
-hardware=$(extract_hardware)
-architecture=$(extract_architecture)
+os_type=$(detect_os)
+download_cpu_check "$os_type"
+
 cpu_info_raw=$(extract_cpu_info)
 khs_values_raw=$(extract_khs_values)
+system_info_raw=$(extract_system_info)
 
 # Convert CPU info and KHS values to arrays
 IFS=$'\n' read -r -d '' -a cpu_info_lines <<<"$cpu_info_raw"
 IFS=$'\n' read -r -d '' -a khs_values <<<"$khs_values_raw"
+IFS=' ' read -r -a system_info <<<"$system_info_raw"
 
 # Check lengths
 cpu_count=${#cpu_info_lines[@]}
@@ -74,29 +115,36 @@ for i in "${!cpu_info_lines[@]}"; do
     fi
 done
 
-# Prepare JSON payload
-json_payload="{\"hardware\":\"$hardware\", \"architecture\":\"$architecture\", \"cpus\":["
+# Prepare JSON data
+hardware="${system_info[0]}"
+architecture="${system_info[1]}"
 
-cpu_first=true
+json_data=$(cat <<EOF
+{
+    "hardware": "$hardware",
+    "architecture": "$architecture",
+    "cpus": [
+        $(for cpu_info in "${!cpu_khs_map[@]}"; do
+            khs_values=(${cpu_khs_map[$cpu_info]})
+            avg_khs=$(calculate_avg_khs "${khs_values[@]}")
+            echo "{ \"cpu\": \"$(echo "$cpu_info" | awk -F' @ ' '{print $1}')\", \"frequency\": \"$(echo "$cpu_info" | awk -F' @ ' '{print $2}')\", \"avg_khs\": \"$avg_khs\" }"
+        done | paste -sd ",")
+    ]
+}
+EOF
+)
+
+# Send JSON data to the PHP API
+api_url="https://api.rg3d.ru:8443/cpu_api.php"
+curl -X POST -H "Content-Type: application/json" -d "$json_data" "$api_url"
+
+# Output the consolidated results
+echo "Hardware: $hardware"
+echo "Architecture: $architecture"
 for cpu_info in "${!cpu_khs_map[@]}"; do
-    if [ "$cpu_first" = true ]; then
-        cpu_first=false
-    else
-        json_payload+=","
-    fi
-
     khs_values=(${cpu_khs_map[$cpu_info]})
     avg_khs=$(calculate_avg_khs "${khs_values[@]}")
-    cpu_model=$(echo "$cpu_info" | awk -F' @ ' '{print $1}')
-    cpu_freq=$(echo "$cpu_info" | awk -F' @ ' '{print $2}' | sed 's/ MHz//')
-
-    json_payload+="{\"cpu\":\"$cpu_model\", \"frequency\":\"$cpu_freq\", \"avg_khs\":\"$avg_khs\"}"
+    echo "CPU: $cpu_info"
+    echo "Average Hashrate: $avg_khs KHS"
+    echo
 done
-
-json_payload+="]}"
-
-# Send JSON payload to the PHP API script
-api_url="https://api.rg3d.eu:8443/cpu_api.php"
-curl -X POST -H "Content-Type: application/json" -d "$json_payload" "$api_url"
-
-echo "Data sent to $api_url"
