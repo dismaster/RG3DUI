@@ -213,3 +213,4 @@ for cpu_info in "${!cpu_khs_map[@]}"; do
     echo -e "${LP}->${NC} Frequency:${LC} $cpu_freq${NC}"
     echo -e "${LP}->${NC} AVG KHS:${LC} $avg_khs${NC}"
 done
+ 
