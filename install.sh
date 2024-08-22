@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Clearing screen
+clear 
+
+# Installer version
+VERSION="1.0.3"
+
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
 R='\033[0;31m'   # Red
@@ -11,14 +17,33 @@ LB='\033[1;34m'  # Light Blue
 P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
-# Fancy Banner with RG3D Logo
+# Log file location
+LOG_FILE="gui_setup.log"
+
+# Logging function
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - v$VERSION - $@" | tee -a $LOG_FILE
+}
+
+# Function to run commands and log their output
+run_command() {
+    log "Running command: $@"
+    "$@" >> $LOG_FILE 2>&1
+    local status=$?
+    if [ $status -ne 0 ]; then
+        log "Command failed with status $status"
+    fi
+    return $status
+}
+
+# Fancy Banner with RG3D VERUS Logo
 echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC} ${LB}__________   ________ ________  ________              ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}\______   \ /  _____/ \_____  \ \______ \             ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB} |       _//   \  ___   _(__  <  |    |  \            ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB} |    |   \\    \_\  \ /       \ |     |   \           ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB} |____|_  / \______  //______  //_______  /           ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}        \/         \/        \/         \/            ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}     __________   ________ ________  ________         ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}     \______   \ /  _____/ \_____  \ \______ \        ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}      |       _//   \  ___   _(__  <  |    |  \       ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}      |    |   \\    \_\  \ /       \ |     |   \      ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}      |____|_  / \______  //______  //_______  /      ${LC}#${NC}"
+echo -e "${LC}#${NC} ${LB}             \/         \/        \/         \/       ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}____   _________________________  ____ ___  _________ ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}\   \ /   /\_   _____/\______   \|    |   \/   _____/ ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB} \   Y   /  |    __)_  |       _/|    |   /\_____  \  ${LC}#${NC}"
@@ -34,47 +59,77 @@ echo  # New line for spacing
 echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
 echo  # New line for spacing
 
-
-# Function to suppress output of commands
-function run_command_silently {
-    "$@" >/dev/null 2>&1
+# Function to check if curl works properly with SSL
+check_curl_ssl() {
+    log "Checking if curl works with SSL..."
+    curl -sI https://www.google.com > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log "curl is working properly with SSL."
+        CURL_CMD="curl -sSL"
+    else
+        log "curl is not working properly with SSL, switching to --insecure mode."
+        CURL_CMD="curl -sSL --insecure"
+    fi
 }
+
+# Run the curl check
+check_curl_ssl
 
 # Function to download a file and make it executable, overwrite if exists
-function download_and_make_executable {
+download_and_make_executable() {
     local url=$1
     local filename=$2
+    local target_dir=$3
 
-    # Change directory to target directory (if provided)
-    if [ ! -z "$3" ]; then
-        (cd $3 && curl -sSL $url -o $filename)
-    else
-        curl -sSL $url -o $filename
+    if [ ! -z "$target_dir" ]; then
+        cd $target_dir
     fi
 
-    # Make file executable
-    chmod +x $filename
+    log "Downloading $url to $filename"
+    $CURL_CMD $url -o $filename
+    if [ $? -eq 0 ]; then
+        chmod +x $filename
+        log "Downloaded and made executable: $filename"
+    else
+        log "Failed to download $url"
+    fi
 }
 
-# Function to build ccminer from source
-function build_ccminer {
-    # Update package repository and install dependencies
-    sudo apt update
-    sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
-
-    # Clone ccminer repository and rename folder to ccminer_build
-    git clone https://github.com/tpruvot/ccminer ~/ccminer/ccminer_build
-    mv ~/ccminer/ccminer_build ~/ccminer/ccminer
-
-    # Change directory to ccminer_build and run build.sh
-    (cd ~/ccminer/ccminer && ./build.sh)
-
+# Function to build ccminer from source for SBCs
+function build_ccminer_sbc {
+    log "Building CCminer for SBC..."
+    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+   
     # After build, create ~/ccminer folder and copy ccminer executable
-    run_command_silently mkdir -p ~/ccminer
-    cp ~/ccminer/ccminer/ccminer ~/ccminer/ccminer
+    run_command mkdir -p ~/ccminer
+    run_command wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
+    run_command chmod +x ~/ccminer/ccminer
 
+    # Install default config for DONATION
+    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+}
+
+# Function to build ccminer from source for UNIX
+function build_ccminer_unix {
+    log "Building CCminer for UNIX..."
+    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command cd ~/ccminer_build 
+    run_command ./build.sh 
+    run_command cd ~/
+    
+    # After build, create ~/ccminer folder and copy ccminer executable
+    run_command mkdir -p ~/ccminer
+    run_command mv ~/ccminer_build/ccminer ~/ccminer/ccminer
+    
     # Clean up ccminer_build folder
-    rm -rf ~/ccminer/ccminer_build
+    run_command rm -rf ~/ccminer_build
+
+    # Install default config for DONATION
+    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
 }
 
 # Function to prompt for password with verification
@@ -89,8 +144,10 @@ function prompt_for_password {
 
         if [[ "$pw1" == "$pw2" ]]; then
             echo "rig_pw=$pw1" > ~/rig.conf
+            log "Password set successfully."
             break
         else
+            log "Passwords do not match."
             echo -e "${R}->${NC} ${R}Passwords do not match. Please try again.${NC}"
         fi
     done
@@ -99,8 +156,12 @@ function prompt_for_password {
 # Function to delete ~/ccminer folder if it exists
 function delete_ccminer_folder {
     if [ -d ~/ccminer ]; then
-        echo -e "${R}->${NC} Deleting existing ~/ccminer folder and its contents${NC}"
+        log "Deleting existing ~/ccminer folder and its contents"
         rm -rf ~/ccminer
+    fi
+    if [ -d ~/ccminer_build ]; then
+        log "Deleting existing ~/ccminer_build folder and its contents"
+        rm -rf ~/ccminer_build
     fi
 }
 
@@ -108,12 +169,19 @@ function delete_ccminer_folder {
 function add_to_crontab {
     local script=$1
     # Remove existing entry from crontab if present
-    (crontab -l | grep -v "$script" ; echo "* * * * * ~/ $script") | crontab - >/dev/null 2>&1
-    echo -e "${LG}->${NC} Added $script to crontab.${NC}"
+    (crontab -l | grep -v "$script" ; echo "* * * * * ~/$script") | crontab - >/dev/null 2>&1
+    log "Added $script to crontab."
 
     # Start the script immediately after adding to crontab
-    echo -e "${LG}->${NC} Starting $script.${NC}"
-    ~/ $script >/dev/null 2>&1 &
+    log "Starting $script."
+    run_command ~/$script
+}
+
+# Function to add scripts to crontab
+function start_miner_at_reboot {
+    # Remove existing entry from crontab if present
+    (crontab -l | grep -v "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
+    log "Added automated start of miner at boot."
 }
 
 # Delete existing ~/ccminer folder including files in it, if it exists
@@ -130,95 +198,143 @@ else
     echo -e "${R}->${NC} Failed to create rig.conf.${NC}"
 fi
 
-# Detect OS
+# Detect OS with debugging
 if [[ $(uname -o) == "Android" ]]; then
-    # Assuming Android OS is Termux
-    echo -e "${R}->${NC} Detected OS: Termux${NC}"
+    log "Detected OS: Android"
+    echo -e "${R}->${NC} Detected OS: Android${NC}"
+    
+    log "Checking for Termux"
+    if command -v termux-info > /dev/null 2>&1; then
+        log "Running on Termux"
+        # Update and upgrade packages
+        log "Updating and upgrading packages"
+        run_command pkg update -y
+        run_command pkg upgrade -y
 
-    # Update and upgrade packages
-    run_command_silently pkg update -y
-    run_command_silently pkg upgrade -y
+        # Install required packages
+        log "Installing required packages"
+        run_command pkg install -y cronie termux-services termux-auth libjansson wget nano git screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu android-tools
 
-    # Install required packages
-    run_command_silently pkg install -y cronie termux-services libjansson wget nano screen openssh termux-services libjansson netcat-openbsd jq termux-api iproute2 tsu
+        # Create ~/.termux folder if not exists
+        log "Creating ~/.termux folder"
+        run_command mkdir -p ~/.termux
+        run_command mkdir -p ~/.cache
 
-    # Create ~/.termux folder if not exists
-    run_command_silently mkdir -p ~/.termux
+        # Create ~/.termux/boot folder if not exists
+        log "Creating ~/.termux/boot folder"
+        run_command mkdir -p ~/.termux/boot
 
-    # Create ~/.termux/boot folder if not exists
-    run_command_silently mkdir -p ~/.termux/boot
+        # Change directory to ~/.termux/boot and download boot_start script
+        log "Downloading boot_start script"
+        run_command wget -q https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -O ~/.termux/boot/boot_start
 
-    # Change directory to ~/.termux/boot and download boot_start script
-    (cd ~/.termux/boot && curl -sSL https://raw.githubusercontent.com/dismaster/RG3DUI/main/boot_start -o boot_start)
+        # Make boot_start script executable
+        log "Making boot_start script executable"
+        run_command chmod +x ~/.termux/boot/boot_start
 
-    # Make boot_start script executable
-    chmod +x ~/.termux/boot/boot_start
+        # Create ~/ccminer folder if not exists
+        log "Creating ~/ccminer folder"
+        run_command mkdir -p ~/ccminer
 
-    # Create ~/ccminer folder if not exists
-    run_command_silently mkdir -p ~/ccminer
+        # Download ccminer and make it executable, overwrite if exists
+        log "Downloading ccminer"
+        run_command wget -q https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -O ~/ccminer/ccminer
+        run_command chmod +x ~/ccminer/ccminer
 
-    # Download ccminer and make it executable, overwrite if exists
-    curl -sSL https://github.com/Oink70/CCminer-ARM-optimized/releases/download/v3.8.3-4/ccminer-3.8.3-4_ARM -o ~/ccminer/ccminer
-    chmod +x ~/ccminer/ccminer
+        # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
+        log "Downloading and setting up jobscheduler.sh, monitor.sh, and vcgencmd"
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
+        
+        # Install default config for DONATION
+        log "Downloading default config"
+        run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+        
+        # Add jobscheduler.sh and monitor.sh to crontab
+        log "Adding jobscheduler.sh and monitor.sh to crontab"
+        add_to_crontab jobscheduler.sh
+        add_to_crontab monitor.sh
 
-    # Run jobscheduler.sh and monitor.sh, overwrite if exists
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-
-    # Add jobscheduler.sh and monitor.sh to crontab
-    add_to_crontab jobscheduler.sh
-    add_to_crontab monitor.sh
-
-elif [[ $(uname -m) == "arm"* ]]; then
-    # Assuming Raspberry Pi OS
-    echo -e "${R}->${NC} Detected OS: Raspberry Pi${NC}"
-
-    # Update and install necessary packages
-    run_command_silently sudo apt-get update
-    run_command_silently sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
-
-    # Clone CCminer repository and rename folder to ccminer, overwrite if exists
-    run_command_silently git clone https://github.com/Oink70/CCminer-ARM-optimized ~/ccminer
-    mv ~/ccminer/CCminer-ARM-optimized ~/ccminer/ccminer
-
-    # Run jobscheduler.sh and monitor.sh, overwrite if exists
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-
-    # Add jobscheduler.sh and monitor.sh to crontab
-    add_to_crontab jobscheduler.sh
-    add_to_crontab monitor.sh
-
+        # Start adb shell in a subshell
+        (adb shell)
+        exit 0
+    else
+        log "Termux not detected, exiting"
+        echo -e "${R}->${NC} Termux not detected. Please run this script in a Termux environment.${NC}"
+        exit 1
+    fi
+    
 else
-    # For other Linux distributions
+    log "Detected OS: $(uname -o)"
     echo -e "${R}->${NC} Detected OS: $(uname -o)${NC}"
+    echo -e "${R}->${NC} ${LC}You might get asked for SUDO password - required for Updates${NC}"
 
-    # Update and install necessary packages
-    run_command_silently sudo apt update
-    run_command_silently sudo apt-get install -y libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential
+    # Check if the system is an SBC (e.g., Raspberry Pi, Orange Pi) or ARM-based
+    if grep -q "Raspberry" /proc/device-tree/model || grep -q "Orange" /proc/device-tree/model || grep -q "Rockchip" /proc/device-tree/model || lscpu | grep -q "ARM"; then
+        log "Detected SBC or ARM-based device"
+        echo -e "${R}->${NC} Detected SBC or ARM-based device${NC}"
 
-    # Change directory to ~/ccminer_build and clone CCminer repository
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
-    download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+        # Check if the system is Raspberry Pi Zero 2W
+        if grep -q "Raspberry Pi Zero 2 W" /proc/device-tree/model; then
+            log "Detected Raspberry Pi Zero 2W"
+            echo -e "${R}->${NC} Detected Raspberry Pi Zero 2W${NC}"
+        fi
 
-    # Add jobscheduler.sh and monitor.sh to crontab
-    add_to_crontab jobscheduler.sh
-    add_to_crontab monitor.sh
+        # Update and install necessary packages
+        run_command sudo apt-get update
+        run_command sudo apt-get install -y libomp5 git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk
+        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
 
-    # Clone CCminer repository and rename folder to ccminer_build
-    git clone https://github.com/tpruvot/ccminer ~/ccminer_build
-    mv ~/ccminer_build ~/ccminer/ccminer_build
+        # Build ccminer with basic configuration
+        build_ccminer_sbc
 
-    # Change directory to ccminer_build and run build.sh
-    (cd ~/ccminer/ccminer_build && ./build.sh)
+        # Run jobscheduler.sh and monitor.sh, overwrite if exists
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
 
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command_silently mkdir -p ~/ccminer
-    cp ~/ccminer/ccminer_build/ccminer ~/ccminer/ccminer
+        # Add jobscheduler.sh and monitor.sh to crontab
+        add_to_crontab jobscheduler.sh
+        add_to_crontab monitor.sh
 
-    # Clean up ccminer_build folder
-    rm -rf ~/ccminer/ccminer_build
+        # Add ccminer to start on boot
+        start_miner_at_reboot
+    else
+        log "Detected general Linux device"
+        echo -e "${R}->${NC} Detected general Linux device${NC}"
+
+        # Update and install necessary packages
+        run_command sudo apt-get update
+        run_command sudo apt-get install -y git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk
+        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
+
+        # Clone CCminer repository and rename folder to ccminer, overwrite if exists
+        run_command git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
+
+        # Build ccminer with basic configuration
+        build_ccminer_unix
+
+        # Run jobscheduler.sh and monitor.sh, overwrite if exists
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+
+        # Add jobscheduler.sh and monitor.sh to crontab
+        add_to_crontab jobscheduler.sh
+        add_to_crontab monitor.sh
+
+        # Add ccminer to start on boot
+        start_miner_at_reboot
+    fi
 fi
 
+# Remove installation script
+run_command rm debug_install.sh
+
+# Start mining instance
+run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+run_command ./monitor.sh
+run_command ./jobscheduler.sh
+
 # Success message
-echo -e "${LG}->${NC} Script execution completed.${NC}"
+echo -e "${LG}->${NC} Installation completed and mining started.${NC}"
+log "Installation completed and mining started."
