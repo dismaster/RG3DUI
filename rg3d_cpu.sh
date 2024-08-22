@@ -21,6 +21,27 @@ calculate_avg_khs() {
     fi
 }
 
+# Detect and install bc if necessary
+install_bc_if_needed() {
+    if ! command -v bc &> /dev/null; then
+        echo "bc is not installed. Installing bc..."
+        if [ -d /data/data/com.termux/files/home ]; then
+            pkg install bc -y
+        elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
+            sudo apt-get update && sudo apt-get install bc -y
+        elif uname -a | grep -qi "android" && [ -f /etc/os-release ] && grep -qi "Ubuntu" /etc/os-release; then
+            sudo apt-get update && sudo apt-get install bc -y
+        elif uname -a | grep -qi "linux"; then
+            sudo apt-get update && sudo apt-get install bc -y
+        else
+            echo "Unsupported OS. Cannot install bc."
+            exit 1
+        fi
+    else
+        echo "bc is already installed."
+    fi
+}
+
 # Detect the running environment and fetch the correct cpu_check binary if necessary
 detect_and_fetch_cpu_check() {
     if [ -f "./cpu_check" ] && [ -x "./cpu_check" ]; then
@@ -64,6 +85,7 @@ extract_khs_values() {
 }
 
 # Main script execution
+install_bc_if_needed
 detect_and_fetch_cpu_check
 hardware=$(extract_hardware)
 architecture=$(extract_architecture)
