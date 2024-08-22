@@ -64,9 +64,9 @@ detect_and_fetch_cpu_check() {
     chmod +x cpu_check
 }
 
-# Extract hardware information
+# Extract hardware information (take the first occurrence only)
 extract_hardware() {
-    ./cpu_check | grep 'Hardware:' | sed 's/.*Hardware: //'
+    ./cpu_check | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
 }
 
 # Extract architecture information
