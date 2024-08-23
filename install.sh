@@ -297,6 +297,8 @@ else
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
+        run_command sudo systemctl enable cron
+
         # Add ccminer to start on boot
         start_miner_at_reboot
     else
