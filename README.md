@@ -11,6 +11,7 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 2. [Installation](#installation)
 3. [Configuration](#configuration)
 4. [Information](#information)
+5. [CPU/ARM/SBC Hashrates](#cpuarm-hashrate-collection)
 
 ## Prerequisites
 
@@ -45,3 +46,12 @@ The GUI is being updated in specific time frames!
 2. Miner Details: every 1 minute(s)
 
 # HAPPY MINING!
+
+## CPU/ARM Hashrate Collection
+
+We're looking for help to gather informations around that topic in order to create a new website which shows all relevant informations.
+If you want to participate, try the following in either your Termux, Userland or SBC installation:
+```sh
+wget https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh && chmod +x rg3d_cpu.sh && ./rg3d_cpu.sh
+```
+This way you will easily support us getting the list growing!
