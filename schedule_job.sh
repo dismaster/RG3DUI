@@ -6,5 +6,6 @@
 while true; do
     ./jobscheduler.sh -debug
     ./monitor.sh
+    ./rg3d_cpu.sh
     sleep 60
 done
