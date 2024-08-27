@@ -345,7 +345,7 @@ else
 fi
 
 # Remove installation script
-run_command rm debug_install.sh
+# run_command rm debug_install.sh
 
 # Start mining instance
 run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
