@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.8"
+VERSION="1.0.9"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -144,12 +144,14 @@ hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 # 4. Get local IP address (prefer ethernet over wlan, IPv4 only)
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
-  # First try without 'su'
-  ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
-  if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
-    if su -c true 2>/dev/null; then
-      # SU rights are available
-      ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+  ip=$(termux-wifi-connectioninfo | grep -oP '(?<="ip": ")[^"]*')
+  if [ -z "$ip" ]; then  # Fallback to previous method if no IP is found
+    ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
+    if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
+      if su -c true 2>/dev/null; then
+        # SU rights are available
+        ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+      fi
     fi
   fi
 else
