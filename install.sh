@@ -4,7 +4,7 @@
 clear 
 
 # Installer version
-VERSION="1.0.4"
+VERSION="1.0.5"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -35,6 +35,15 @@ run_command() {
     fi
     return $status
 }
+
+# Parse command-line arguments for -pw <password>
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -pw|--password) PASSWORD="$2"; shift ;;
+        *) echo -e "${R}->${NC} Invalid argument: $1"; exit 1 ;;
+    esac
+    shift
+done
 
 # Fancy Banner with RG3D VERUS Logo
 echo -e "${LC}#########################################################${NC}"
@@ -132,25 +141,30 @@ function build_ccminer_unix {
     run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
 }
 
-# Function to prompt for password with verification
+# Function to prompt for password with verification, or use provided password
 function prompt_for_password {
-    while true; do
-        echo -e "${R}->${NC} ${Y}Enter RIG Password:${NC}"
-        read -s pw1
-        echo
-        echo -e "${R}->${NC} ${Y}Confirm RIG Password:${NC}"
-        read -s pw2
-        echo
+    if [ -n "$PASSWORD" ]; then
+        log "Using provided password."
+        echo "rig_pw=$PASSWORD" > ~/rig.conf
+    else
+        while true; do
+            echo -e "${R}->${NC} ${Y}Enter RIG Password:${NC}"
+            read -s pw1
+            echo
+            echo -e "${R}->${NC} ${Y}Confirm RIG Password:${NC}"
+            read -s pw2
+            echo
 
-        if [[ "$pw1" == "$pw2" ]]; then
-            echo "rig_pw=$pw1" > ~/rig.conf
-            log "Password set successfully."
-            break
-        else
-            log "Passwords do not match."
-            echo -e "${R}->${NC} ${R}Passwords do not match. Please try again.${NC}"
-        fi
-    done
+            if [[ "$pw1" == "$pw2" ]]; then
+                echo "rig_pw=$pw1" > ~/rig.conf
+                log "Password set successfully."
+                break
+            else
+                log "Passwords do not match."
+                echo -e "${R}->${NC} ${R}Passwords do not match. Please try again.${NC}"
+            fi
+        done
+    fi
 }
 
 # Function to delete ~/ccminer folder if it exists
@@ -241,11 +255,11 @@ if [[ $(uname -o) == "Android" ]]; then
         run_command wget -q https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -O ~/ccminer/ccminer
         run_command chmod +x ~/ccminer/ccminer
 
-        # Run jobscheduler.sh, monitor.sh and vcgencmd, overwrite if exists
-        log "Downloading and setting up jobscheduler.sh, monitor.sh, and vcgencmd"
+        # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
+        log "Downloading and setting up jobscheduler.sh, monitor.sh, and schedule_job.sh"
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
-        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
         
         # Install default config for DONATION
         log "Downloading default config"
@@ -289,9 +303,10 @@ else
         # Build ccminer with basic configuration
         build_ccminer_sbc
 
-        # Run jobscheduler.sh and monitor.sh, overwrite if exists
+        # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
 
         # Add jobscheduler.sh and monitor.sh to crontab
         add_to_crontab jobscheduler.sh
@@ -308,7 +323,7 @@ else
         # Update and install necessary packages
         run_command sudo apt-get update
         run_command sudo apt-get install -y cron git libcurl4-openssl-dev libssl-dev libjansson-dev automake autotools-dev build-essential screen netcat-openbsd jq iproute2 gawk
-        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
+        run_command sudo apt-get install -y libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 clangd-16 clang-tidy-16 libclang-rt-16-dev libpolly-16-dev libfuzzer-16-dev lldb-16 lld-16 libc++-16-dev libc++abi-16-dev libomp-16-dev libclc-16-dev libunwind-16-dev libmlir-16-dev mlir-16-tools flang-16 libclang-rt-16-dev-wasm32 libclang-rt-16-dev-wasm64
 
         # Clone CCminer repository and rename folder to ccminer, overwrite if exists
         run_command git clone --single-branch -b Verus2.2 https://github.com/monkins1010/ccminer.git ~/ccminer_build
