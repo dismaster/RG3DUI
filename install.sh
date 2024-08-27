@@ -256,9 +256,10 @@ if [[ $(uname -o) == "Android" ]]; then
         run_command chmod +x ~/ccminer/ccminer
 
         # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
-        log "Downloading and setting up jobscheduler.sh, monitor.sh, and schedule_job.sh"
+        log "Downloading and setting up jobscheduler.sh, monitor.sh, rg3d_cpu.sh, and schedule_job.sh"
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh rg3d_cpu.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
         
         # Install default config for DONATION
@@ -303,9 +304,10 @@ else
         # Build ccminer with basic configuration
         build_ccminer_sbc
 
-        # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
+        # Run jobscheduler.sh, monitor.sh, rg3d_cpu.sh and schedule_job.sh, overwrite if exists
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/jobscheduler.sh jobscheduler.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh rg3d_cpu.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
 
         # Add jobscheduler.sh and monitor.sh to crontab
