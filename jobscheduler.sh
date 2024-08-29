@@ -73,7 +73,7 @@ curl_request() {
   
   if [ -z "$ssl_supported" ]; then
     debug "SSL support not found in rig.conf. Checking SSL support..."
-    response=$(curl -s -X POST -d "$data" "$url")
+    response=$(curl -4 -s -X POST -d "$data" "$url")
     if [ $? -eq 0 ]; then
       ssl_supported=true
     else
@@ -84,9 +84,9 @@ curl_request() {
   fi
 
   if [ "$ssl_supported" = true ]; then
-    response=$(curl -s -X POST -d "$data" "$url")
+    response=$(curl -4 -s -X POST -d "$data" "$url")
   else
-    response=$(curl -k -s -X POST -d "$data" "$url")
+    response=$(curl -4 -k -s -X POST -d "$data" "$url")
   fi
 
   echo "$response"
@@ -97,10 +97,10 @@ wget_request() {
   local url="$1"
   local output="$2"
   
-  wget -q -O "$output" "$url"
+  wget -4 -q -O "$output" "$url"
   if [ $? -ne 0 ]; then
     debug "SSL verification failed, retrying with --no-check-certificate option."
-    wget --no-check-certificate -q -O "$output" "$url"
+    wget -4 --no-check-certificate -q -O "$output" "$url"
   fi
 }
 
