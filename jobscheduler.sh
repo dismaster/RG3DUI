@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.1.0"
+VERSION="1.1.1"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -157,11 +157,23 @@ restart_required=false
 
 # Fetch the new configuration from the server
 config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
+
+# Check if the config response is valid JSON before parsing
+if ! echo "$config_response" | jq empty; then
+  debug "Invalid configuration received. Keeping the miner running."
+  exit 0
+fi
+
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
 threads=${cpu_miner:-$cpu_max}
-config_response_parsed=$(echo "$config_response_parsed" | jq ".threads = $threads")
+if [ -n "$threads" ]; then
+  config_response_parsed=$(echo "$config_response_parsed" | jq ".threads = $threads")
+else
+  debug "Threads value is empty. Keeping the current configuration."
+  exit 0
+fi
 
 # Compare the new configuration with the current configuration
 if [ -f "$config_file" ]; then
