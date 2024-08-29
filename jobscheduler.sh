@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.1.2"
+VERSION="1.1.5"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -22,11 +22,9 @@ get_ip_address() {
     # For Android
     ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
     if [ -z "$ip" ]; then
-      # If no IP address was found, try with 'ifconfig' and 'su'
       ip=$(su -c "ifconfig" 2>/dev/null | grep -oP '(?<=inet addr:)\d+(\.\d+){3}' | grep -v 127.0.0.1)
       if [ -z "$ip" ]; then
         if su -c true 2>/dev/null; then
-          # SU rights are available
           ip=$(su -c "ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1")
         fi
       fi
@@ -53,7 +51,6 @@ check_internet_connection() {
     debug "Internet is down! Attempting to restart network."
     if [ -n "$(uname -o | grep Android)" ]; then
       if su -c true 2>/dev/null; then
-        # SU rights are available
         su -c input keyevent 26
         su -c svc wifi disable
         su -c svc wifi enable
@@ -61,7 +58,6 @@ check_internet_connection() {
         debug "No root access to restart WiFi on Android."
       fi
     elif [ -n "$(uname -m | grep arm)" ]; then
-      # For Raspberry Pi (assuming Debian-based OS)
       sudo ifconfig wlan0 down
       sudo ifconfig wlan0 up
     else
@@ -75,10 +71,8 @@ curl_request() {
   local url="$1"
   local data="$2"
   
-  # Read SSL support status from rig.conf
   ssl_supported=$(grep 'ssl_supported' ~/rig.conf | cut -d '=' -f 2 | tr -d ' ')
   
-  # Check if ssl_supported is set, if not, determine and set it
   if [ -z "$ssl_supported" ]; then
     debug "SSL support not found in rig.conf. Checking SSL support..."
     response=$(curl -s -X POST -d "$data" "$url")
@@ -91,7 +85,6 @@ curl_request() {
     debug "SSL support status set to $ssl_supported in rig.conf."
   fi
 
-  # Make the curl request based on SSL support status
   if [ "$ssl_supported" = true ]; then
     response=$(curl -s -X POST -d "$data" "$url")
   else
@@ -144,7 +137,7 @@ debug "Response from API: $response"
 job_id=$(echo $response | jq -r '.job_id' 2>/dev/null)
 job_action=$(echo $response | jq -r '.job_action' 2>/dev/null)
 job_settings=$(echo $response | jq -r '.job_settings' 2>/dev/null)
-rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null)
+rig_fs=$(echo $response | jq -r '.rig_fs' 2>/dev/null || echo "null")
 cpu_miner=$(echo $response | jq -r '.cpu_miner' 2>/dev/null)
 cpu_max=$(echo $response | jq -r '.cpu_max' 2>/dev/null)
 
@@ -157,40 +150,27 @@ restart_required=false
 
 # Fetch the new configuration from the server
 config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
-
-# Check if the config response is valid JSON before parsing
-if ! echo "$config_response" | jq empty; then
-  debug "Invalid configuration received. Keeping the miner running."
-  exit 0
-fi
-
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
 threads=${cpu_miner:-$cpu_max}
-if [ -n "$threads" ]; then
-  config_response_parsed=$(echo "$config_response_parsed" | jq ".threads = $threads")
-else
-  debug "Threads value is empty. Keeping the current configuration."
-  exit 0
-fi
+config_response_parsed=$(echo "$config_response_parsed" | jq ".threads = $threads")
 
-# Compare the new configuration with the current configuration
+# Debug configurations for comparison
+debug "Fetched configuration: $config_response_parsed"
+
 if [ -f "$config_file" ]; then
   current_config=$(jq -S . "$config_file")
+  debug "Current configuration: $current_config"
 else
   current_config=""
 fi
 
-# Only update the configuration if it differs from the current configuration
+# Perform strict comparison
 if [ "$config_response_parsed" != "$current_config" ]; then
-  if [ -n "$config_response_parsed" ]; then
-    echo "$config_response_parsed" > "$config_file"
-    restart_required=true
-    debug "Configuration updated from API."
-  else
-    debug "No valid configuration received. Keeping the current configuration."
-  fi
+  echo "$config_response_parsed" > "$config_file"
+  restart_required=true
+  debug "Configuration updated from API."
 else
   debug "No changes to the configuration needed."
 fi
