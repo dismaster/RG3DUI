@@ -16,7 +16,7 @@ Welcome to the Mining Monitor installation guide! This document will walk you th
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
-- **Device**: Mining Cabable Phone or ARM SBC 64 bit CPU and Operating System
+- **Device**: Mining Capable Phone or ARM SBC 64 bit CPU and Operating System
 - **Operating System**: Linux if you are on an SBC, Userland or Termux (including termux-api and termux-boot) if you are on android.
 - **RIG Password**: Add a RIG in the GUI to get the password generated (Details in [Installation](#installation)).
 
