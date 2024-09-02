@@ -1,13 +1,13 @@
 {
         "pools":[
         {
-                "name": "pool.verus.io:9998",
-                "url": "stratum+tcp://pool.verus.io:9998",
+                "name": "eu.luckpool.net:3960",
+                "url": "stratum+tcp://eu.luckpool.net:3960",
                 "timeout": 150,
                 "disabled": 0
         }],
 
-        "user": "RRccuLtVhHTcbTBr3z4kjqe3ubVAzrcWzn.DONATION",
+        "user": "RRV4nWAxg9dVLY1vavmpGKq3s3N8wMHqZy.DONATION",
         "pass": "x",
         "algo": "verus",
         "threads": 8,
