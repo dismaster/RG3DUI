@@ -58,7 +58,7 @@ echo -e "${LC}#${NC} ${LB}\   \ /   /\_   _____/\______   \|    |   \/   _____/ 
 echo -e "${LC}#${NC} ${LB} \   Y   /  |    __)_  |       _/|    |   /\_____  \  ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}  \     /   |        \ |    |   \|    |  / /        \ ${LC}#${NC}"
 echo -e "${LC}#${NC} ${LB}   \___/   /_______  / |____|_  /|______/ /_______  / ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}                   \/         \/                  \/  ${LC}#${NC}"
+echo -e "${LC}#${NC}                   \/         \/                  \/  ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#          ${LP}->${NC} ${LG}VERUS Miner SETUP${NC} by Ch3ckr ${P}<-${NC}            ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
@@ -104,41 +104,70 @@ download_and_make_executable() {
     fi
 }
 
-# Function to build ccminer from source for SBCs
-function build_ccminer_sbc {
-    log "Building CCminer for SBC..."
-    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-   
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command mkdir -p ~/ccminer
-    run_command wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
-    run_command chmod +x ~/ccminer/ccminer
+# Function to select ccminer version based on CPU architecture in Termux
+select_ccminer_version() {
+    log "Detecting CPU architecture..."
 
-    # Install default config for DONATION
-    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+    CPU_INFO=$(./cpu_check_arm) # Run the CPU detection tool for Termux
+    log "CPU info: $CPU_INFO"
+
+    # Use regex to match against possible CPU configurations and select the correct branch
+    if echo "$CPU_INFO" | grep -q "A72.*A53"; then
+        CC_BRANCH="a72-a53"
+    elif echo "$CPU_INFO" | grep -q "A73.*A53"; then
+        CC_BRANCH="a73-a53"
+    elif echo "$CPU_INFO" | grep -q "EM3.*A55"; then
+        CC_BRANCH="em3-a55"
+    elif echo "$CPU_INFO" | grep -q "A57.*A53"; then
+        CC_BRANCH="a57-a53"
+    elif echo "$CPU_INFO" | grep -q "A75.*A55"; then
+        CC_BRANCH="a75-a55"
+    elif echo "$CPU_INFO" | grep -q "A76.*A55"; then
+        CC_BRANCH="a76-a55"
+    elif echo "$CPU_INFO" | grep -q "A35"; then
+        CC_BRANCH="a35"
+    elif echo "$CPU_INFO" | grep -q "A53"; then
+        CC_BRANCH="a53"
+    elif echo "$CPU_INFO" | grep -q "A55"; then
+        CC_BRANCH="a55"
+    elif echo "$CPU_INFO" | grep -q "A57"; then
+        CC_BRANCH="a57"
+    elif echo "$CPU_INFO" | grep -q "A65"; then
+        CC_BRANCH="a65"
+    elif echo "$CPU_INFO" | grep -q "A72"; then
+        CC_BRANCH="a72"
+    elif echo "$CPU_INFO" | grep -q "A73"; then
+        CC_BRANCH="a73"
+    elif echo "$CPU_INFO" | grep -q "A75"; then
+        CC_BRANCH="a75"
+    elif echo "$CPU_INFO" | grep -q "A76"; then
+        CC_BRANCH="a76"
+    elif echo "$CPU_INFO" | grep -q "A77"; then
+        CC_BRANCH="a77"
+    elif echo "$CPU_INFO" | grep -q "A78"; then
+        CC_BRANCH="a78"
+    elif echo "$CPU_INFO" | grep -q "A78C"; then
+        CC_BRANCH="a78c"
+    elif echo "$CPU_INFO" | grep -q "X1.*A78.*A55"; then
+        CC_BRANCH="x1-a78-a55"
+    elif echo "$CPU_INFO" | grep -q "EM5.*A76.*A55"; then
+        CC_BRANCH="em5-a76-a55"
+    elif echo "$CPU_INFO" | grep -q "EM4.*A75.*A55"; then
+        CC_BRANCH="em4-a75-a55"
+    else
+        CC_BRANCH="generic"
+    fi
+
+    log "Selected ccminer branch: $CC_BRANCH"
 }
 
-# Function to build ccminer from source for UNIX
-function build_ccminer_unix {
-    log "Building CCminer for UNIX..."
-    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
-    run_command cd ~/ccminer_build 
-    run_command ./build.sh 
-    run_command cd ~/
-    
-    # After build, create ~/ccminer folder and copy ccminer executable
-    run_command mkdir -p ~/ccminer
-    run_command mv ~/ccminer_build/ccminer ~/ccminer/ccminer
-    
-    # Clean up ccminer_build folder
-    run_command rm -rf ~/ccminer_build
-
-    # Install default config for DONATION
-    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+# Download and setup the correct ccminer version based on CPU architecture in Termux
+function download_ccminer_version {
+    select_ccminer_version
+    local url="https://raw.githubusercontent.com/Darktron/pre-compiled/$CC_BRANCH/ccminer"
+    log "Downloading ccminer for $CC_BRANCH branch..."
+    run_command wget -q -O ~/ccminer/ccminer $url
+    run_command chmod +x ~/ccminer/ccminer
 }
 
 # Function to prompt for password with verification, or use provided password
@@ -191,11 +220,10 @@ function add_to_crontab {
     run_command ~/$script
 }
 
-# Function to add scripts to crontab
+# Function to add miner start at boot
 function start_miner_at_reboot {
-    # Remove existing entry from crontab if present
     (crontab -l | grep -v "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
-    log "Added automated start of miner at boot."
+    log "Added automated miner start at boot."
 }
 
 # Delete existing ~/ccminer folder including files in it, if it exists
@@ -251,9 +279,7 @@ if [[ $(uname -o) == "Android" ]]; then
         run_command mkdir -p ~/ccminer
 
         # Download ccminer and make it executable, overwrite if exists
-        log "Downloading ccminer"
-        run_command wget -q https://raw.githubusercontent.com/Darktron/pre-compiled/generic/ccminer -O ~/ccminer/ccminer
-        run_command chmod +x ~/ccminer/ccminer
+        download_ccminer_version
 
         # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
         log "Downloading and setting up jobscheduler.sh, monitor.sh, rg3d_cpu.sh, and schedule_job.sh"
@@ -273,6 +299,7 @@ if [[ $(uname -o) == "Android" ]]; then
 
         # Start adb shell in a subshell
         (adb shell)
+        termux-vibrate -f -d 1000
         exit 0
     else
         log "Termux not detected, exiting"
@@ -347,7 +374,7 @@ else
 fi
 
 # Remove installation script
-# run_command rm debug_install.sh
+run_command rm install.sh
 
 # Start mining instance
 run_command screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
