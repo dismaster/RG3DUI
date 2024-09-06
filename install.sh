@@ -149,21 +149,21 @@ select_ccminer_version() {
     log "CPU info: $CPU_INFO"
 
     # Prioritize combined CPU configurations first, and then fallback to single core types
-    if echo "$CPU_INFO" | grep -q "A76.*A55"; then
+    if echo "$CPU_INFO" | grep -q "A76" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="a76-a55"
-    elif echo "$CPU_INFO" | grep -q "A75.*A55"; then
+    elif echo "$CPU_INFO" | grep -q "A75" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="a75-a55"
-    elif echo "$CPU_INFO" | grep -q "A72.*A53"; then
+    elif echo "$CPU_INFO" | grep -q "A72" && echo "$CPU_INFO" | grep -q "A53"; then
         CC_BRANCH="a72-a53"
-    elif echo "$CPU_INFO" | grep -q "A73.*A53"; then
+    elif echo "$CPU_INFO" | grep -q "A73" && echo "$CPU_INFO" | grep -q "A53"; then
         CC_BRANCH="a73-a53"
-    elif echo "$CPU_INFO" | grep -q "EM5.*A76.*A55"; then
+    elif echo "$CPU_INFO" | grep -q "EM5" && echo "$CPU_INFO" | grep -q "A76" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="em5-a76-a55"
-    elif echo "$CPU_INFO" | grep -q "EM4.*A75.*A55"; then
+    elif echo "$CPU_INFO" | grep -q "EM4" && echo "$CPU_INFO" | grep -q "A75" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="em4-a75-a55"
-    elif echo "$CPU_INFO" | grep -q "EM3.*A55"; then
+    elif echo "$CPU_INFO" | grep -q "EM3" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="em3-a55"
-    elif echo "$CPU_INFO" | grep -q "A57.*A53"; then
+    elif echo "$CPU_INFO" | grep -q "A57" && echo "$CPU_INFO" | grep -q "A53"; then
         CC_BRANCH="a57-a53"
     
     # Now check for single-core architectures if no combinations match
@@ -191,7 +191,7 @@ select_ccminer_version() {
         CC_BRANCH="a78"
     elif echo "$CPU_INFO" | grep -q "A78C"; then
         CC_BRANCH="a78c"
-    elif echo "$CPU_INFO" | grep -q "X1.*A78.*A55"; then
+    elif echo "$CPU_INFO" | grep -q "X1" && echo "$CPU_INFO" | grep -q "A78" && echo "$CPU_INFO" | grep -q "A55"; then
         CC_BRANCH="x1-a78-a55"
     else
         CC_BRANCH="generic"
@@ -199,6 +199,7 @@ select_ccminer_version() {
 
     log "Selected ccminer branch: $CC_BRANCH"
 }
+
 
 # Function to prompt for password with verification, or use provided password
 function prompt_for_password {
