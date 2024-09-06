@@ -290,6 +290,7 @@ if [[ $(uname -o) == "Android" ]]; then
         log "Creating ~/.termux folder"
         run_command mkdir -p ~/.termux
         run_command mkdir -p ~/.cache
+        run_command mkdir -p ~/ccminer
 
         # Create ~/.termux/boot folder if not exists
         log "Creating ~/.termux/boot folder"
