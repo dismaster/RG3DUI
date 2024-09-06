@@ -332,12 +332,12 @@ if [[ $(uname -o) == "Android" ]]; then
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
-        # Termux vibration for notification
-        termux-vibrate -f -d 1000
-
         # Start adb shell in a subshell
         (adb shell)
         exit 0
+        
+        # Termux vibration for notification
+        termux-vibrate -f -d 1000    
     else
         log "Termux not detected, exiting"
         echo -e "${R}->${NC} Termux not detected. Please run this script in a Termux environment.${NC}"
