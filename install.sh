@@ -148,19 +148,25 @@ select_ccminer_version() {
     CPU_INFO=$(./cpu_check_arm) # Run the CPU detection tool for Termux
     log "CPU info: $CPU_INFO"
 
-    # Use regex to match against possible CPU configurations and select the correct branch
-    if echo "$CPU_INFO" | grep -q "A72.*A53"; then
+    # Prioritize combined CPU configurations first, and then fallback to single core types
+    if echo "$CPU_INFO" | grep -q "A76.*A55"; then
+        CC_BRANCH="a76-a55"
+    elif echo "$CPU_INFO" | grep -q "A75.*A55"; then
+        CC_BRANCH="a75-a55"
+    elif echo "$CPU_INFO" | grep -q "A72.*A53"; then
         CC_BRANCH="a72-a53"
     elif echo "$CPU_INFO" | grep -q "A73.*A53"; then
         CC_BRANCH="a73-a53"
+    elif echo "$CPU_INFO" | grep -q "EM5.*A76.*A55"; then
+        CC_BRANCH="em5-a76-a55"
+    elif echo "$CPU_INFO" | grep -q "EM4.*A75.*A55"; then
+        CC_BRANCH="em4-a75-a55"
     elif echo "$CPU_INFO" | grep -q "EM3.*A55"; then
         CC_BRANCH="em3-a55"
     elif echo "$CPU_INFO" | grep -q "A57.*A53"; then
         CC_BRANCH="a57-a53"
-    elif echo "$CPU_INFO" | grep -q "A75.*A55"; then
-        CC_BRANCH="a75-a55"
-    elif echo "$CPU_INFO" | grep -q "A76.*A55"; then
-        CC_BRANCH="a76-a55"
+    
+    # Now check for single-core architectures if no combinations match
     elif echo "$CPU_INFO" | grep -q "A35"; then
         CC_BRANCH="a35"
     elif echo "$CPU_INFO" | grep -q "A53"; then
@@ -187,10 +193,6 @@ select_ccminer_version() {
         CC_BRANCH="a78c"
     elif echo "$CPU_INFO" | grep -q "X1.*A78.*A55"; then
         CC_BRANCH="x1-a78-a55"
-    elif echo "$CPU_INFO" | grep -q "EM5.*A76.*A55"; then
-        CC_BRANCH="em5-a76-a55"
-    elif echo "$CPU_INFO" | grep -q "EM4.*A75.*A55"; then
-        CC_BRANCH="em4-a75-a55"
     else
         CC_BRANCH="generic"
     fi
