@@ -4,7 +4,7 @@
 clear 
 
 # Installer version
-VERSION="1.0.6"
+VERSION="1.0.7"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -104,7 +104,44 @@ download_and_make_executable() {
     fi
 }
 
-# Function to select ccminer version based on CPU architecture in Termux
+# Function to build ccminer from source for SBCs
+function build_ccminer_sbc {
+    log "Building CCminer for SBC..."
+    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+   
+    # After build, create ~/ccminer folder and copy ccminer executable
+    run_command mkdir -p ~/ccminer
+    run_command wget -q -O ~/ccminer/ccminer https://raw.githubusercontent.com/Oink70/CCminer-ARM-optimized/main/ccminer
+    run_command chmod +x ~/ccminer/ccminer
+
+    # Install default config for DONATION
+    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+}
+
+# Function to build ccminer from source for UNIX
+function build_ccminer_unix {
+    log "Building CCminer for UNIX..."
+    run_command wget http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command rm libssl1.1_1.1.0g-2ubuntu4_arm64.deb
+    run_command cd ~/ccminer_build 
+    run_command ./build.sh 
+    run_command cd ~/
+    
+    # After build, create ~/ccminer folder and copy ccminer executable
+    run_command mkdir -p ~/ccminer
+    run_command mv ~/ccminer_build/ccminer ~/ccminer/ccminer
+    
+    # Clean up ccminer_build folder
+    run_command rm -rf ~/ccminer_build
+
+    # Install default config for DONATION
+    run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
+}
+
+# Function to select the correct ccminer version based on CPU
 select_ccminer_version() {
     log "Detecting CPU architecture..."
 
@@ -161,15 +198,6 @@ select_ccminer_version() {
     log "Selected ccminer branch: $CC_BRANCH"
 }
 
-# Download and setup the correct ccminer version based on CPU architecture in Termux
-function download_ccminer_version {
-    select_ccminer_version
-    local url="https://raw.githubusercontent.com/Darktron/pre-compiled/$CC_BRANCH/ccminer"
-    log "Downloading ccminer for $CC_BRANCH branch..."
-    run_command wget -q -O ~/ccminer/ccminer $url
-    run_command chmod +x ~/ccminer/ccminer
-}
-
 # Function to prompt for password with verification, or use provided password
 function prompt_for_password {
     if [ -n "$PASSWORD" ]; then
@@ -220,10 +248,11 @@ function add_to_crontab {
     run_command ~/$script
 }
 
-# Function to add miner start at boot
+# Function to add scripts to crontab
 function start_miner_at_reboot {
+    # Remove existing entry from crontab if present
     (crontab -l | grep -v "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json" ; echo "@reboot /usr/bin/screen -dmS CCminer /home/$USER/ccminer/ccminer -c /home/$USER/ccminer/config.json") | crontab - >/dev/null 2>&1
-    log "Added automated miner start at boot."
+    log "Added automated start of miner at boot."
 }
 
 # Delete existing ~/ccminer folder including files in it, if it exists
@@ -274,12 +303,14 @@ if [[ $(uname -o) == "Android" ]]; then
         log "Making boot_start script executable"
         run_command chmod +x ~/.termux/boot/boot_start
 
-        # Create ~/ccminer folder if not exists
-        log "Creating ~/ccminer folder"
-        run_command mkdir -p ~/ccminer
+        # Download cpu check
+        log "Downloading and setting up CPU check"
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm cpu_check_arm
 
-        # Download ccminer and make it executable, overwrite if exists
-        download_ccminer_version
+        # Select and download correct ccminer version based on CPU architecture
+        select_ccminer_version
+        run_command wget -q "https://raw.githubusercontent.com/Darktron/pre-compiled/$CC_BRANCH/ccminer" -O ~/ccminer/ccminer
+        run_command chmod +x ~/ccminer/ccminer
 
         # Run jobscheduler.sh, monitor.sh, and schedule_job.sh, overwrite if exists
         log "Downloading and setting up jobscheduler.sh, monitor.sh, rg3d_cpu.sh, and schedule_job.sh"
@@ -297,9 +328,11 @@ if [[ $(uname -o) == "Android" ]]; then
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
+        # Termux vibration for notification
+        termux-vibrate -f -d 1000
+
         # Start adb shell in a subshell
         (adb shell)
-        termux-vibrate -f -d 1000
         exit 0
     else
         log "Termux not detected, exiting"
