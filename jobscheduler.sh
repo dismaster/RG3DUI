@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.1.5"
+VERSION="1.1.6"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
