@@ -11,4 +11,4 @@ adb shell settings put global sem_enhanced_cpu_responsiveness 1
 adb shell settings put global wifi_sleep_policy 2
 screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
 ~/jobscheduler.sh
-crond -n -s
+crond
