@@ -332,10 +332,6 @@ if [[ $(uname -o) == "Android" ]]; then
         add_to_crontab jobscheduler.sh
         add_to_crontab monitor.sh
 
-        # Start adb shell in a subshell
-        (adb shell)
-        exit 0
-        
         # Termux vibration for notification
         termux-vibrate -f -d 1000    
     else
