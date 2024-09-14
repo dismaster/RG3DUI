@@ -322,6 +322,7 @@ if [[ $(uname -o) == "Android" ]]; then
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh rg3d_cpu.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
         
         # Install default config for DONATION
         log "Downloading default config"
