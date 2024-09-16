@@ -4,8 +4,8 @@
 ## screen -dmS Scheduler ./schedule_job.sh
 
 while true; do
-    ./jobscheduler.sh -debug
-    ./monitor.sh
-    ./rg3d_cpu.sh
+    ~/jobscheduler.sh -debug
+    ~/monitor.sh
+    ~/rg3d_cpu.sh
     sleep 60
 done
