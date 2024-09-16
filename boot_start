@@ -1,13 +1,25 @@
 #!/data/data/com.termux/files/usr/bin/sh
+
+# Source the environment (if needed)
+source /data/data/com.termux/files/usr/etc/profile
+
 termux-wake-lock
 sshd
-sv-enable crond
+crond
+screen -wipe
+
+# Start screen sessions and log outputs
+screen -dmS Scheduler bash ~/schedule_job.sh
+sleep 2
+
+screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
+sleep 2
+
 adb shell dumpsys battery set level 100
 adb shell svc power stayon true
 adb shell dumpsys deviceidle whitelist +com.termux.boot
 adb shell dumpsys deviceidle whitelist +com.termux
+adb shell dumpsys deviceidle whitelist +com.termux.api
 adb shell settings put global system_capabilities 100
 adb shell settings put global sem_enhanced_cpu_responsiveness 1
 adb shell settings put global wifi_sleep_policy 2
-screen -dmS CCminer ~/ccminer/ccminer -c ~/ccminer/config.json
-screen -dmS Scheduler ~/schedule_job.sh
