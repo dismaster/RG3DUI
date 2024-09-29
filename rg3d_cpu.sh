@@ -21,6 +21,11 @@ echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
 echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
 echo -e  # New line for spacing
 
+# Check if -crontab argument is passed to add crontab
+if [[ "$1" == "-crontab" ]]; then
+    add_crontab
+fi
+
 # Function to calculate average KHS
 calculate_avg_khs() {
     local khs_values=("$@")
@@ -243,8 +248,3 @@ for cpu_info in "${!cpu_khs_map[@]}"; do
     echo -e "${LP}->${NC} Frequency:${LC} $cpu_freq${NC}"
     echo -e "${LP}->${NC} AVG KHS:${LC} $avg_khs${NC}"
 done
-
-# Check if -crontab argument is passed to add crontab
-if [[ "$1" == "-crontab" ]]; then
-    add_crontab
-fi
