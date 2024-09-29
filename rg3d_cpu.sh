@@ -31,9 +31,6 @@ echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#${NC}              ${LG}https://api.rg3d.eu:8443${NC}                 ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
 echo  # New line for spacing
-#echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
-#echo  # New line for spacing
-
 
 # Function to calculate average KHS
 calculate_avg_khs() {
@@ -112,6 +109,20 @@ extract_khs_values() {
     echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
 }
 
+# Function to check the number of shares from ccminer
+check_shares() {
+    shares=$(echo 'summary' | nc 127.0.0.1 4068 | grep -oP '(?<="accepted":)[0-9]+')
+    if [ -z "$shares" ]; then
+        echo -e "\033[31mError: Could not retrieve share data. Exiting.\033[0m"
+        exit 1
+    elif [ "$shares" -lt 150 ]; then
+        echo -e "\033[31mShares are below 150. Skipping data submission.\033[0m"
+        exit 0
+    else
+        echo -e "\033[32mShares accepted: $shares. Proceeding with data submission.\033[0m"
+    fi
+}
+
 # Check if ccminer is running in a screen session or independently
 check_ccminer_running() {
     if screen -list | grep -q "CCminer"; then
@@ -129,6 +140,9 @@ check_ccminer_running() {
 detect_and_fetch_cpu_check
 check_and_install_bc
 check_ccminer_running
+
+# Check for the number of shares
+check_shares
 
 hardware=$(extract_hardware)
 architecture=$(extract_architecture)
