@@ -92,8 +92,34 @@ The GUI is being updated in specific time frames!
 
 ## CPU/ARM Hashrate Collection
 
-We're looking for help to gather information around that topic in order to create a new website which shows all relevant information. If you want to participate, try the following in either your Termux, Userland, or SBC installation:
-```sh
+We're looking for help to gather information around CPU/ARM hashrates in order to create a new website that will showcase all relevant data. Your participation will help expand the list of known configurations and their performance.
+
+### How to Participate
+
+You can easily help us gather this data by running a script on your **Termux**, **Userland**, or **SBC** installation. Follow these steps to participate:
+
+1. Ensure that `ccminer` is running and that API access is properly configured. Modify the `config.json` file of `ccminer` with the following lines to enable the API:
+
+   ```json
+   "api-allow": "0/0",
+   "api-bind": "0.0.0.0:4068"
+This will allow the script to access ccminer via its default API port (4068), enabling it to gather relevant information like accepted shares and hashrates.
+
+Run the following commands in your terminal to download and execute the script:
+
+sh
+Copy code
 wget https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh && chmod +x rg3d_cpu.sh && ./rg3d_cpu.sh
-```
-This way you will easily support us in getting the list growing!
+Optionally, you can set up the script to run every 5 minutes using a cron job by running:
+
+sh
+Copy code
+./rg3d_cpu.sh -crontab
+What the Script Does
+Detects the operating system and downloads the appropriate cpu_check binary for your environment.
+Gathers information about your CPU (model, frequency) and the average hashrate (KHS).
+Checks if ccminer is running and using the default API port (4068) to retrieve mining statistics.
+Sends the gathered data to the server for inclusion in the public database.
+This information will be used to build a public page where users can search for CPU models, architectures, and frequencies, along with their corresponding hashrates.
+
+Thank you for helping us build a valuable resource for the community!
