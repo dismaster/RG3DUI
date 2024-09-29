@@ -111,7 +111,7 @@ extract_khs_values() {
 
 # Function to check the number of shares from ccminer
 check_shares() {
-    shares=$(echo 'summary' | nc 127.0.0.1 4068 | grep -oP '(?<="accepted":)[0-9]+')
+    shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
     if [ -z "$shares" ]; then
         echo -e "\033[31mError: Could not retrieve share data. Exiting.\033[0m"
         exit 1
