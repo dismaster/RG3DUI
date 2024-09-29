@@ -12,25 +12,14 @@ P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
 # Fancy banner
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC} ${LB}     __________   ________ ________  ________         ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}     \______   \ /  _____/ \_____  \ \______ \        ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |       _//   \  ___   _(__  <  |    |  \       ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |    |   \\    \_\  \ /       \ |     |   \      ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |____|_  / \______  //______  //_______  /      ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}             \/         \/        \/         \/       ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}____   _________________________  ____ ___  _________ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}\   \ /   /\_   _____/\______   \|    |   \/   _____/ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB} \   Y   /  |    __)_  |       _/|    |   /\_____  \  ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}  \     /   |        \ |    |   \|    |  / /        \ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}   \___/   /_______  / |____|_  /|______/ /_______  / ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}                   \/         \/                  \/  ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#           ${LP}->${NC} ${LG}VERUS CPU CHECK${NC} by Ch3ckr  ${P}<-${NC}            ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC}              ${LG}https://api.rg3d.eu:8443${NC}                 ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo  # New line for spacing
+echo -e "${LB} _____ _____ _____ ${NC}"
+echo -e "${LB}|     |  _  |  |  |${NC}  {LC}CCminer${NC}"
+echo -e "${LB}|   --|   __|  |  |${NC}  {LC}Hashrate${NC}"
+echo -e "${LB}|_____|__|  |_____|${NC}  {LC}CPU Check${NC}"
+echo -e "${LB} ___| |_ ___ ___| |_ ${NC}"
+echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
+echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
+echo -e
 
 # Ensure netcat (nc) is installed
 check_and_install_nc() {
