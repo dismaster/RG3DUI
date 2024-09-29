@@ -106,10 +106,10 @@ You can easily help us gather this data by running a script on your **Termux**, 
 This will allow the script to access ccminer via its default API port (4068), enabling it to gather relevant information like accepted shares and hashrates.
 
 Run the following commands in your terminal to download and execute the script:
-
-sh
 Copy code
+```sh
 wget https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh && chmod +x rg3d_cpu.sh && ./rg3d_cpu.sh
+```
 Optionally, you can set up the script to run every 5 minutes using a cron job by running:
 
 sh
