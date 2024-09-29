@@ -154,7 +154,6 @@ check_shares() {
         exit 0
     else
         shares_status="\033[32m$shares (Good).\033[0m"
-        echo -e "${LP}->${NC} Shares:$shares_status"
     fi
 }
 
