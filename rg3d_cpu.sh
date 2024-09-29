@@ -15,9 +15,9 @@ LP='\033[1;35m'  # Light Purple
 
 # Fancy banner
 echo -e "${LB}  _____ _____ _____ ${NC}"
-echo -e "${LB} |     |  _  |  |  |${NC}   ${LC}CCminer${NC}"
-echo -e "${LB} |   --|   __|  |  |${NC}   ${LC}Hashrate${NC}"
-echo -e "${LB} |_____|__|  |_____|${NC}   ${LC}CPU Check${NC}"
+echo -e "${LB} |     |  _  |  |  |${NC}  ${LC}CCminer${NC}"
+echo -e "${LB} |   --|   __|  |  |${NC}  ${LC}Hashrate${NC}"
+echo -e "${LB} |_____|__|  |_____|${NC}  ${LC}CPU Check${NC}"
 echo -e "${LB} ___| |_ ___ ___| |_ ${NC}"
 echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
 echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
