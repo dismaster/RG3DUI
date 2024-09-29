@@ -21,6 +21,21 @@ echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
 echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
 echo -e  # New line for spacing
 
+# Check if -crontab argument is passed to add crontab
+add_crontab() {
+    if crontab -l | grep -q "rg3d_cpu.sh"; then
+        echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
+    else
+        (crontab -l 2>/dev/null; echo "* * * * * $PWD/rg3d_cpu.sh") | crontab -
+        echo -e "${LP}->${NC} Crontab:\033[32m added (every minute).\033[0m"
+    fi
+}
+
+if [[ "$1" == "-crontab" ]]; then
+    add_crontab
+    exit 0
+fi
+
 # Function to calculate average KHS
 calculate_avg_khs() {
     local khs_values=("$@")
@@ -39,6 +54,28 @@ calculate_avg_khs() {
         echo "$avg"
     else
         echo "0.00"
+    fi
+}
+
+# Detect the running environment and fetch the correct cpu_check binary if necessary
+detect_and_fetch_cpu_check() {
+    if [ -f "./cpu_check" ] && [ -x "./cpu_check" ]; then
+        cpu_check_status="exists and is executable."
+    else
+        if [ -d /data/data/com.termux/files/home ]; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm
+        elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        elif uname -a | grep -qi "android" && [ -f /etc/os-release ] && grep -qi "Ubuntu" /etc/os-release; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        elif uname -a | grep -qi "linux"; then
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+        else
+            echo -e "\033[31mUnsupported OS. Exiting.\033[0m"
+            exit 1
+        fi
+        chmod +x cpu_check
+        cpu_check_status="downloaded and set as executable."
     fi
 }
 
@@ -70,16 +107,6 @@ check_and_install_nc() {
     fi
 }
 
-# Function to add crontab entry
-add_crontab() {
-    if crontab -l | grep -q "rg3d_cpu.sh"; then
-        echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
-    else
-        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
-        echo -e "${LP}->${NC} Crontab:\033[32m added.\033[0m"
-    fi
-}
-
 # Extract hardware information
 extract_hardware() {
     ./cpu_check | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
@@ -100,6 +127,17 @@ extract_khs_values() {
     echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
 }
 
+# Check if ccminer config has correct api settings
+check_ccminer_config() {
+    if [ -z "$config_file" ]; then
+        config_check_status="\033[31m Config file not found. Exiting.\033[0m"
+    elif grep -q '"api-allow": "0/0"' "$config_file" && grep -q '"api-bind": "0.0.0.0:4068"' "$config_file"; then
+        config_check_status="\033[32m Config is properly set.\033[0m"
+    else
+        config_check_status="\033[31m Config file is missing required API settings. Exiting.\033[0m"
+    fi
+}
+
 # Function to check the number of shares from ccminer
 check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
@@ -117,76 +155,29 @@ check_shares() {
 # Check if ccminer is running in a screen session or independently
 check_ccminer_running() {
     if screen -list | grep -q "CCminer"; then
+        ccminer_pid=$(pgrep -f 'SCREEN.*CCminer')
+        config_file=$(tr '\0' ' ' < /proc/$ccminer_pid/cmdline | grep -oP '(?<=-c )[^ ]+')
         ccminer_status="Screen session: 'CCminer'."
     elif pgrep -x "ccminer" > /dev/null; then
+        ccminer_pid=$(pgrep -x "ccminer")
+        config_file=$(tr '\0' ' ' < /proc/$ccminer_pid/cmdline | grep -oP '(?<=-c )[^ ]+')
         ccminer_status="running."
     else
         ccminer_status="not running. Exiting."
         echo -e "\033[31m$ccminer_status\033[0m"
         exit 1
     fi
+    # Perform the config file check
+    check_ccminer_config
 }
 
 # Main script execution
-detect_and_fetch_cpu_check() {
-    if [ -f "./cpu_check" ] && [ -x "./cpu_check" ]; then
-        cpu_check_status="exists and is executable."
-    else
-        if [ -d /data/data/com.termux/files/home ]; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm
-        elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
-        elif uname -a | grep -qi "android" && [ -f /etc/os-release ] && grep -qi "Ubuntu" /etc/os-release; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
-        elif uname -a | grep -qi "linux"; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
-        else
-            echo -e "\033[31mUnsupported OS. Exiting.\033[0m"
-            exit 1
-        fi
-        chmod +x cpu_check
-        cpu_check_status="downloaded and set as executable."
-    fi
-}
-
-check_ccminer_config() {
-    ccminer_pid=$(pgrep -x "ccminer" | head -n 1)
-    
-    if [ -n "$ccminer_pid" ]; then
-        ccminer_cmd=$(tr '\0' ' ' < /proc/"$ccminer_pid"/cmdline | grep -oP '(?<=-c )[^ ]+')
-        config_file="$ccminer_cmd"
-
-        if [ -f "$config_file" ]; then
-            if grep -q '"api-allow": "0/0"' "$config_file" && grep -q '"api-bind": "0.0.0.0:4068"' "$config_file"; then
-                config_status="\033[32mConfig is properly set.\033[0m"
-            else
-                config_status="\033[31mMissing required API settings in config.json.\033[0m"
-                echo -e "${LP}->${NC} Config check:\033[31m Missing required API settings in $config_file. Exiting.\033[0m"
-                exit 1
-            fi
-        else
-            config_status="\033[31mConfig file not found.\033[0m"
-            echo -e "${LP}->${NC} Config check:\033[31m Config file not found at $config_file. Exiting.\033[0m"
-            exit 1
-        fi
-    else
-        config_status="\033[31mNo ccminer process found.\033[0m"
-        echo -e "${LP}->${NC} Config check:\033[31m No ccminer process found. Exiting.\033[0m"
-        exit 1
-    fi
-}
-
-# Check crontab at the start
-if [[ "$1" == "-crontab" ]]; then
-    add_crontab
-fi
-
-# Proceed with main execution
 detect_and_fetch_cpu_check
 check_and_install_packages
 check_and_install_nc
 check_ccminer_running
-check_ccminer_config
+
+# Check for the number of shares
 check_shares
 
 hardware=$(extract_hardware)
@@ -223,7 +214,6 @@ done
 
 # Prepare JSON payload
 json_payload="{\"hardware\":\"$hardware\", \"architecture\":\"$architecture\", \"cpus\":["
-
 cpu_first=true
 for cpu_info in "${!cpu_khs_map[@]}"; do
     if [ "$cpu_first" = true ]; then
@@ -256,14 +246,13 @@ echo -e "${LP}->${NC} Software:\033[32m $cpu_check_status\033[0m"
 echo -e "${LP}->${NC} Package (bc):\033[32m $bc_status\033[0m"
 echo -e "${LP}->${NC} Package (netcat):\033[32m $nc_status\033[0m"
 echo -e "${LP}->${NC} CCminer:\033[32m $ccminer_status\033[0m"
-echo -e "${LP}->${NC} Config check:\033[32m $config_status\033[0m"
+echo -e "${LP}->${NC} Config check:$config_check_status"
 echo -e "${LP}->${NC} Shares:\033[32m $shares_status\033[0m"
 echo -e "${LP}->${NC} Transmission:\033[32m $data_status\033[0m\n"
 
 # Fancy overview of what has been sent
 echo -e "${LP}->${NC} Hardware:${LP} $hardware${NC}"
 echo -e "${LP}->${NC} Architecture:${LP} $architecture${NC}"
-
 for cpu_info in "${!cpu_khs_map[@]}"; do
     khs_values=(${cpu_khs_map[$cpu_info]})
     avg_khs=$(calculate_avg_khs "${khs_values[@]}")
