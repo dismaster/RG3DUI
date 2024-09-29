@@ -111,8 +111,6 @@ Copy code
 wget https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh && chmod +x rg3d_cpu.sh && ./rg3d_cpu.sh
 ```
 Optionally, you can set up the script to run every 5 minutes using a cron job by running:
-
-sh
 Copy code
 ```sh
 ./rg3d_cpu.sh -crontab
