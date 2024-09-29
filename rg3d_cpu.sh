@@ -38,7 +38,7 @@ check_and_install_nc() {
         if [ -d /data/data/com.termux/files/home ]; then
             pkg install netcat -y
         else
-            sudo apt-get install netcat -y
+            sudo apt-get install netcat-traditional -y
         fi
         nc_status="installed."
     else
