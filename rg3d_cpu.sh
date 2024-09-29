@@ -19,21 +19,7 @@ echo -e "${LB}|_____|__|  |_____|${NC}   ${LC}CPU Check${NC}"
 echo -e "${LB} ___| |_ ___ ___| |_ ${NC}"
 echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
 echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
-echo -e
-
-# Ensure netcat (nc) is installed
-check_and_install_nc() {
-    if ! command -v nc &> /dev/null; then
-        if [ -d /data/data/com.termux/files/home ]; then
-            pkg install netcat -y
-        else
-            sudo apt-get install netcat-traditional -y
-        fi
-        nc_status="installed."
-    else
-        nc_status="already installed."
-    fi
-}
+echo -e  # New line for spacing
 
 # Function to calculate average KHS
 calculate_avg_khs() {
@@ -78,8 +64,8 @@ detect_and_fetch_cpu_check() {
     fi
 }
 
-# Ensure bc is installed
-check_and_install_bc() {
+# Ensure bc and netcat are installed
+check_and_install_packages() {
     if ! command -v bc &> /dev/null; then
         if [ -d /data/data/com.termux/files/home ]; then
             pkg install bc -y
@@ -89,6 +75,30 @@ check_and_install_bc() {
         bc_status="installed."
     else
         bc_status="already installed."
+    fi
+}
+
+# Ensure netcat (nc) is installed
+check_and_install_nc() {
+    if ! command -v nc &> /dev/null; then
+        if [ -d /data/data/com.termux/files/home ]; then
+            pkg install netcat -y
+        else
+            sudo apt-get install netcat-traditional -y
+        fi
+        nc_status="installed."
+    else
+        nc_status="already installed."
+    fi
+}
+
+# Function to add crontab entry
+add_crontab() {
+    if crontab -l | grep -q "rg3d_cpu.sh"; then
+        echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
+    else
+        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
+        echo -e "${LP}->${NC} Crontab:\033[32m added.\033[0m"
     fi
 }
 
@@ -116,20 +126,20 @@ extract_khs_values() {
 check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
     if [ -z "$shares" ]; then
-        echo -e "${LP}->${NC} Shares accepted:\033[31m Error: Could not retrieve share data. Exiting.\033[0m"
+        shares_status="\033[31mError (no share data).\033[0m"
         exit 1
     elif [ "$shares" -lt 150 ]; then
-        echo -e "${LP}->${NC} Shares accepted:\033[31m $shares (Below 150). Skipping data submission.\033[0m"
+        shares_status="\033[31m$shares (Bad - Below 150).\033[0m"
         exit 0
     else
-        echo -e "${LP}->${NC} Shares accepted:\033[32m $shares (Proceeding with data submission).\033[0m"
+        shares_status="\033[32m$shares (Good).\033[0m"
     fi
 }
 
 # Check if ccminer is running in a screen session or independently
 check_ccminer_running() {
     if screen -list | grep -q "CCminer"; then
-        ccminer_status="running in screen session 'CCminer'."
+        ccminer_status="Screen session: 'CCminer'."
     elif pgrep -x "ccminer" > /dev/null; then
         ccminer_status="running."
     else
@@ -141,7 +151,7 @@ check_ccminer_running() {
 
 # Main script execution
 detect_and_fetch_cpu_check
-check_and_install_bc
+check_and_install_packages
 check_and_install_nc
 check_ccminer_running
 
@@ -182,7 +192,6 @@ done
 
 # Prepare JSON payload
 json_payload="{\"hardware\":\"$hardware\", \"architecture\":\"$architecture\", \"cpus\":["
-
 cpu_first=true
 for cpu_info in "${!cpu_khs_map[@]}"; do
     if [ "$cpu_first" = true ]; then
@@ -198,7 +207,6 @@ for cpu_info in "${!cpu_khs_map[@]}"; do
 
     json_payload+="{\"cpu\":\"$cpu_model\", \"frequency\":\"$cpu_freq\", \"avg_khs\":\"$avg_khs\"}"
 done
-
 json_payload+="]}"
 
 # Send JSON payload to the PHP API script
@@ -206,22 +214,22 @@ api_url="https://api.rg3d.eu:8443/cpu_api.php"
 response=$(curl -s -X POST -H "Content-Type: application/json" -d "$json_payload" "$api_url")
 
 if [[ $response == *"success"* ]]; then
-    data_status="success"
+    data_status="Success."
 else
-    data_status="failed"
+    data_status="Failed."
 fi
 
 # Final user-friendly output
-echo -e "${LP}->${NC} Required Software:\033[32m $cpu_check_status\033[0m"
-echo -e "${LP}->${NC} Required Packages:\033[32m $bc_status\033[0m"
-echo -e "${LP}->${NC} Required Packages:\033[32m $nc_status\033[0m"
+echo -e "${LP}->${NC} Software:\033[32m $cpu_check_status\033[0m"
+echo -e "${LP}->${NC} Package (bc):\033[32m $bc_status\033[0m"
+echo -e "${LP}->${NC} Package (netcat):\033[32m $nc_status\033[0m"
 echo -e "${LP}->${NC} CCminer:\033[32m $ccminer_status\033[0m"
-echo -e "${LP}->${NC} Data send:\033[32m $data_status\033[0m\n"
+echo -e "${LP}->${NC} Shares:\033[32m $shares_status\033[0m"
+echo -e "${LP}->${NC} Transmission:\033[32m $data_status\033[0m\n"
 
 # Fancy overview of what has been sent
 echo -e "${LP}->${NC} Hardware:${LP} $hardware${NC}"
 echo -e "${LP}->${NC} Architecture:${LP} $architecture${NC}"
-
 for cpu_info in "${!cpu_khs_map[@]}"; do
     khs_values=(${cpu_khs_map[$cpu_info]})
     avg_khs=$(calculate_avg_khs "${khs_values[@]}")
@@ -232,3 +240,8 @@ for cpu_info in "${!cpu_khs_map[@]}"; do
     echo -e "${LP}->${NC} Frequency:${LC} $cpu_freq${NC}"
     echo -e "${LP}->${NC} AVG KHS:${LC} $avg_khs${NC}"
 done
+
+# Check if -crontab argument is passed to add crontab
+if [[ "$1" == "-crontab" ]]; then
+    add_crontab
+fi
