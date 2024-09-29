@@ -35,7 +35,6 @@ add_crontab() {
 
 if [[ "$1" == "-crontab" ]]; then
     add_crontab
-    exit 0
 fi
 
 # Function to calculate average KHS
