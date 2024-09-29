@@ -32,6 +32,20 @@ echo -e "${LC}#${NC}              ${LG}https://api.rg3d.eu:8443${NC}            
 echo -e "${LC}#########################################################${NC}"
 echo  # New line for spacing
 
+# Ensure netcat (nc) is installed
+check_and_install_nc() {
+    if ! command -v nc &> /dev/null; then
+        if [ -d /data/data/com.termux/files/home ]; then
+            pkg install netcat -y
+        else
+            sudo apt-get install netcat -y
+        fi
+        nc_status="installed."
+    else
+        nc_status="already installed."
+    fi
+}
+
 # Function to calculate average KHS
 calculate_avg_khs() {
     local khs_values=("$@")
@@ -113,13 +127,13 @@ extract_khs_values() {
 check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
     if [ -z "$shares" ]; then
-        echo -e "\033[31mError: Could not retrieve share data. Exiting.\033[0m"
+        echo -e "${LP}->${NC} Shares accepted:\033[31m Error: Could not retrieve share data. Exiting.\033[0m"
         exit 1
     elif [ "$shares" -lt 150 ]; then
-        echo -e "\033[31mShares are below 150. Skipping data submission.\033[0m"
+        echo -e "${LP}->${NC} Shares accepted:\033[31m $shares (Below 150). Skipping data submission.\033[0m"
         exit 0
     else
-        echo -e "\033[32mShares accepted: $shares. Proceeding with data submission.\033[0m"
+        echo -e "${LP}->${NC} Shares accepted:\033[32m $shares (Proceeding with data submission).\033[0m"
     fi
 }
 
@@ -139,6 +153,7 @@ check_ccminer_running() {
 # Main script execution
 detect_and_fetch_cpu_check
 check_and_install_bc
+check_and_install_nc
 check_ccminer_running
 
 # Check for the number of shares
@@ -210,6 +225,7 @@ fi
 # Final user-friendly output
 echo -e "${LP}->${NC} Required Software:\033[32m $cpu_check_status\033[0m"
 echo -e "${LP}->${NC} Required Packages:\033[32m $bc_status\033[0m"
+echo -e "${LP}->${NC} Required Packages:\033[32m $nc_status\033[0m"
 echo -e "${LP}->${NC} CCminer:\033[32m $ccminer_status\033[0m"
 echo -e "${LP}->${NC} Data send:\033[32m $data_status\033[0m\n"
 
