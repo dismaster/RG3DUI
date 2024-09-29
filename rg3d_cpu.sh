@@ -1,5 +1,7 @@
 #!/bin/bash
 
+VERSION='1.0.0'
+
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
 R='\033[0;31m'   # Red
