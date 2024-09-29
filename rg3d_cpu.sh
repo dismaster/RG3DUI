@@ -21,6 +21,16 @@ echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
 echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
 echo -e  # New line for spacing
 
+# Function to add crontab entry
+add_crontab() {
+    if crontab -l | grep -q "rg3d_cpu.sh"; then
+        echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
+    else
+        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
+        echo -e "${LP}->${NC} Crontab:\033[32m added.\033[0m"
+    fi
+}
+
 # Check if -crontab argument is passed to add crontab
 if [[ "$1" == "-crontab" ]]; then
     add_crontab
@@ -94,16 +104,6 @@ check_and_install_nc() {
         nc_status="installed."
     else
         nc_status="already installed."
-    fi
-}
-
-# Function to add crontab entry
-add_crontab() {
-    if crontab -l | grep -q "rg3d_cpu.sh"; then
-        echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
-    else
-        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
-        echo -e "${LP}->${NC} Crontab:\033[32m added.\033[0m"
     fi
 }
 
