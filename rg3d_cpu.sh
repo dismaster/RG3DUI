@@ -28,7 +28,7 @@ add_crontab() {
     if crontab -l | grep -q "rg3d_cpu.sh"; then
         echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
     else
-        (crontab -l 2>/dev/null; echo "* * * * * $PWD/rg3d_cpu.sh") | crontab -
+        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
         echo -e "${LP}->${NC} Crontab:\033[32m added (every minute).\033[0m"
     fi
 }
