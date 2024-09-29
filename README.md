@@ -114,7 +114,9 @@ Optionally, you can set up the script to run every 5 minutes using a cron job by
 
 sh
 Copy code
+```sh
 ./rg3d_cpu.sh -crontab
+```
 What the Script Does
 Detects the operating system and downloads the appropriate cpu_check binary for your environment.
 Gathers information about your CPU (model, frequency) and the average hashrate (KHS).
