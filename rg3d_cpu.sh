@@ -107,26 +107,6 @@ check_and_install_nc() {
     fi
 }
 
-# Extract hardware information
-extract_hardware() {
-    ./cpu_check | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
-}
-
-# Extract architecture information
-extract_architecture() {
-    ./cpu_check | grep 'Architecture:' | sed 's/.*Architecture: //'
-}
-
-# Extract CPU information from the file and parse model and frequency
-extract_cpu_info() {
-    ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
-}
-
-# Extract KHS values based on environment
-extract_khs_values() {
-    echo 'threads' | nc 127.0.0.1 4068 | tr -d '\0' | grep -o "KHS=[0-9]*\.[0-9]*" | awk -F= '{print $2}'
-}
-
 # Function to check the number of shares from ccminer
 check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
