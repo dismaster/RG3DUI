@@ -2,7 +2,7 @@
 
 Welcome to the Mining Monitor installation guide! This document will walk you through the steps necessary to install and set up the Mining Monitor on your system.
 
-[Mining GUI](https://api.rg3d.eu:8443)
+[Mining GUI](https://gui.rg3d.eu)
 
 [Discord](https://discord.gg/P5BmXK8dkp)
 
