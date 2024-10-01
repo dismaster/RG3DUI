@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION='1.0.0'
+VERSION='1.0.1'
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -20,7 +20,7 @@ echo -e "${LB} |   --|   __|  |  |${NC}  ${LC}Hashrate${NC}"
 echo -e "${LB} |_____|__|  |_____|${NC}  ${LC}CPU Check${NC}"
 echo -e "${LB} ___| |_ ___ ___| |_ ${NC}"
 echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
-echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
+echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://gui.rg3d.eu${NC}"
 echo -e  # New line for spacing
 
 # Check if -crontab argument is passed to add crontab
