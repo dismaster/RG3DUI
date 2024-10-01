@@ -45,7 +45,7 @@ def print_banner():
 {LC}|.  |__|__|_____|____|___._|__|__|_____|__|{NC}  
 {LC}|:  |       Developer ~ @Ch3ckr{NC}
 {LC}|::.|       Tool      ~ RG3D Mining GUI Installer{NC}
-{LC}`---'       For More ~ https://api.rg3d.eu:8443{NC}
+{LC}`---'       For More  ~ https://gui.rg3d.eu{NC}
     """
     print(banner)
 
