@@ -62,7 +62,7 @@ echo -e "${LC}#${NC}                   \/         \/                  \/  ${LC}#
 echo -e "${LC}#########################################################${NC}"
 echo -e "${LC}#          ${LP}->${NC} ${LG}VERUS Miner SETUP${NC} by Ch3ckr ${P}<-${NC}            ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC}              ${LG}https://api.rg3d.eu:8443${NC}                 ${LC}#${NC}"
+echo -e "${LC}#${NC}                 ${LG}https://gui.rg3d.eu  ${NC}                 ${LC}#${NC}"
 echo -e "${LC}#########################################################${NC}"
 echo  # New line for spacing
 echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
