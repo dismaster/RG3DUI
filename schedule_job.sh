@@ -1,7 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-source /data/data/com.termux/files/usr/etc/profile
-
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
 R='\033[0;31m'   # Red
@@ -22,8 +20,15 @@ echo -e "${LC}|          |${NC}    Dev  ~ ${LP}@Ch3ckr${NC}"
 echo -e "${LC}|__________|${NC}    URL  ~ ${Y}https://gui.rg3d.eu${NC}"
 
 while true; do
-    bash /data/data/com.termux/files/home/jobscheduler.sh -debug
-    bash /data/data/com.termux/files/home/monitor.sh
-    bash /data/data/com.termux/files/home/rg3d_cpu.sh
+    # Perform actions and log messages
+    bash /data/data/com.termux/files/home/jobscheduler.sh > /dev/null 2>&1
+
+    bash /data/data/com.termux/files/home/monitor.sh > /dev/null 2>&1
+
+    bash /data/data/com.termux/files/home/rg3d_cpu.sh > /dev/null 2>&1
+
+    # Log the end of the minute
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - Actions performed, waiting for the next cycle..."
+
     sleep 60
 done
