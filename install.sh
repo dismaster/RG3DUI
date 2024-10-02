@@ -46,26 +46,13 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Fancy Banner with RG3D VERUS Logo
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC} ${LB}     __________   ________ ________  ________         ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}     \______   \ /  _____/ \_____  \ \______ \        ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |       _//   \  ___   _(__  <  |    |  \       ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |    |   \\    \_\  \ /       \ |     |   \      ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}      |____|_  / \______  //______  //_______  /      ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}             \/         \/        \/         \/       ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}____   _________________________  ____ ___  _________ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}\   \ /   /\_   _____/\______   \|    |   \/   _____/ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB} \   Y   /  |    __)_  |       _/|    |   /\_____  \  ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}  \     /   |        \ |    |   \|    |  / /        \ ${LC}#${NC}"
-echo -e "${LC}#${NC} ${LB}   \___/   /_______  / |____|_  /|______/ /_______  / ${LC}#${NC}"
-echo -e "${LC}#${NC}                   \/         \/                  \/  ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#          ${LP}->${NC} ${LG}VERUS Miner SETUP${NC} by Ch3ckr ${P}<-${NC}            ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo -e "${LC}#${NC}                 ${LG}https://gui.rg3d.eu  ${NC}                 ${LC}#${NC}"
-echo -e "${LC}#########################################################${NC}"
-echo  # New line for spacing
-echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
+echo -e "{LC} ___             __         __ __{NC}"
+echo -e "{LC}|   .-----.-----|  |_.---.-|  |  .-----.----.{NC}"
+echo -e "{LC}|.  |     |__ --|   _|  _  |  |  |  -__|   _|{NC}"
+echo -e "{LC}|.  |__|__|_____|____|___._|__|__|_____|__|{NC}  "
+echo -e "{LC}|:  |       Developer ~ @Ch3ckr{NC}"
+echo -e "{LC}|::.|       Tool      ~ RG3D Installer{NC}"
+echo -e "{LC}`---'       For More  ~ https://gui.rg3d.eu{NC}"
 echo  # New line for spacing
 
 # Function to check if curl works properly with SSL
