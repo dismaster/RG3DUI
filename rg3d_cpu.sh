@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION='1.0.1'
+VERSION="1.0.2"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -20,7 +20,7 @@ echo -e "${LB} |   --|   __|  |  |${NC}  ${LC}Hashrate${NC}"
 echo -e "${LB} |_____|__|  |_____|${NC}  ${LC}CPU Check${NC}"
 echo -e "${LB} ___| |_ ___ ___| |_ ${NC}"
 echo -e "${LB}|  _|   | -_|  _| '_|${NC} by ${LP}@Ch3ckr${NC}"
-echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://gui.rg3d.eu${NC}"
+echo -e "${LB}|___|_|_|___|___|_,_|${NC} ${LG}https://api.rg3d.eu:8443${NC}"
 echo -e  # New line for spacing
 
 # Check if -crontab argument is passed to add crontab
@@ -28,13 +28,14 @@ add_crontab() {
     if crontab -l | grep -q "rg3d_cpu.sh"; then
         echo -e "${LP}->${NC} Crontab:\033[32m already exists.\033[0m"
     else
-        (crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/rg3d_cpu.sh") | crontab -
+        (crontab -l 2>/dev/null; echo "* * * * * $PWD/rg3d_cpu.sh") | crontab -
         echo -e "${LP}->${NC} Crontab:\033[32m added (every minute).\033[0m"
     fi
 }
 
 if [[ "$1" == "-crontab" ]]; then
     add_crontab
+    exit 0
 fi
 
 # Function to calculate average KHS
@@ -64,18 +65,18 @@ detect_and_fetch_cpu_check() {
         cpu_check_status="exists and is executable."
     else
         if [ -d /data/data/com.termux/files/home ]; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_arm > /dev/null 2>&1
         elif uname -a | grep -qi "raspberry\|pine\|odroid\|arm"; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc > /dev/null 2>&1
         elif uname -a | grep -qi "android" && [ -f /etc/os-release ] && grep -qi "Ubuntu" /etc/os-release; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc > /dev/null 2>&1
         elif uname -a | grep -qi "linux"; then
-            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc
+            wget -4 -O cpu_check https://raw.githubusercontent.com/dismaster/RG3DUI/main/cpu_check_sbc > /dev/null 2>&1
         else
             echo -e "\033[31mUnsupported OS. Exiting.\033[0m"
             exit 1
         fi
-        chmod +x cpu_check
+        chmod +x cpu_check > /dev/null 2>&1
         cpu_check_status="downloaded and set as executable."
     fi
 }
@@ -84,9 +85,9 @@ detect_and_fetch_cpu_check() {
 check_and_install_packages() {
     if ! command -v bc &> /dev/null; then
         if [ -d /data/data/com.termux/files/home ]; then
-            pkg install bc -y
+            pkg install bc -y > /dev/null 2>&1
         else
-            sudo apt-get install bc -y
+            sudo apt-get install bc -y > /dev/null 2>&1
         fi
         bc_status="installed."
     else
@@ -98,9 +99,9 @@ check_and_install_packages() {
 check_and_install_nc() {
     if ! command -v nc &> /dev/null; then
         if [ -d /data/data/com.termux/files/home ]; then
-            pkg install netcat -y
+            pkg install netcat -y > /dev/null 2>&1
         else
-            sudo apt-get install netcat-traditional -y
+            sudo apt-get install netcat-traditional -y > /dev/null 2>&1
         fi
         nc_status="installed."
     else
@@ -108,19 +109,27 @@ check_and_install_nc() {
     fi
 }
 
+# Main script execution
+detect_and_fetch_cpu_check  # Ensure cpu_check is downloaded
+check_and_install_packages
+check_and_install_nc
+
+# Now that cpu_check is available, run it and store output
+cpu_check_output=$(./cpu_check)
+
 # Extract hardware information
 extract_hardware() {
-    ./cpu_check | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
+    echo "$cpu_check_output" | grep 'Hardware:' | head -n 1 | sed 's/.*Hardware: //'
 }
 
 # Extract architecture information
 extract_architecture() {
-    ./cpu_check | grep 'Architecture:' | sed 's/.*Architecture: //'
+    echo "$cpu_check_output" | grep 'Architecture:' | sed 's/.*Architecture: //'
 }
 
-# Extract CPU information from the file and parse model and frequency
+# Extract CPU information from the stored output and parse model and frequency
 extract_cpu_info() {
-    ./cpu_check | grep 'Processor' | awk -F': ' '{print $2}'
+    echo "$cpu_check_output" | grep 'Processor' | awk -F': ' '{print $2}'
 }
 
 # Extract KHS values based on environment
@@ -132,14 +141,17 @@ extract_khs_values() {
 check_ccminer_config() {
     if [ -z "$config_file" ]; then
         config_check_status="\033[31m Config file not found. Exiting.\033[0m"
+        echo -e "${LP}->${NC} Config check:$config_check_status"
+        exit 1
     elif grep -q '"api-allow": "0/0"' "$config_file" && grep -q '"api-bind": "0.0.0.0:4068"' "$config_file"; then
         config_check_status="\033[32m Config is properly set.\033[0m"
     else
         config_check_status="\033[31m Config file is missing required API settings. Exiting.\033[0m"
+        echo -e "${LP}->${NC} Config check:$config_check_status"
+        exit 1
     fi
 }
 
-# Function to check the number of shares from ccminer
 # Function to check the number of shares from ccminer
 check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
@@ -153,6 +165,7 @@ check_shares() {
         exit 0
     else
         shares_status="\033[32m$shares (Good).\033[0m"
+        echo -e "${LP}->${NC} Shares:$shares_status"
     fi
 }
 
@@ -160,11 +173,11 @@ check_shares() {
 check_ccminer_running() {
     if screen -list | grep -q "CCminer"; then
         ccminer_pid=$(pgrep -f 'SCREEN.*CCminer')
-        config_file=$(tr '\0' ' ' < /proc/$ccminer_pid/cmdline | grep -oP '(?<=-c )[^ ]+')
+        config_file=$(cat /proc/$ccminer_pid/cmdline | tr '\0' ' ' | grep -oP '(?<=-c )[^ ]+')
         ccminer_status="Screen session: 'CCminer'."
     elif pgrep -x "ccminer" > /dev/null; then
         ccminer_pid=$(pgrep -x "ccminer")
-        config_file=$(tr '\0' ' ' < /proc/$ccminer_pid/cmdline | grep -oP '(?<=-c )[^ ]+')
+        config_file=$(cat /proc/$ccminer_pid/cmdline | tr '\0' ' ' | grep -oP '(?<=-c )[^ ]+')
         ccminer_status="running."
     else
         ccminer_status="not running. Exiting."
@@ -188,6 +201,12 @@ hardware=$(extract_hardware)
 architecture=$(extract_architecture)
 cpu_info_raw=$(extract_cpu_info)
 khs_values_raw=$(extract_khs_values)
+
+# Check for missing hardware or CPU info
+if [[ -z "$hardware" || -z "$architecture" || -z "$cpu_info_raw" || "$cpu_info_raw" == "0" ]]; then
+    echo -e "\033[31mError: Missing or invalid hardware, architecture, or CPU frequency. Data not sent.\033[0m"
+    exit 1
+fi
 
 # Convert CPU info and KHS values to arrays
 IFS=$'\n' read -r -d '' -a cpu_info_lines <<<"$cpu_info_raw"
