@@ -29,7 +29,7 @@ while true; do
     bash /data/data/com.termux/files/home/rg3d_cpu.sh > /dev/null 2>&1
 
     # Log the end of the minute
-    echo "${LC}$(date +'%Y-%m-%d %H:%M:%S')${NC} - Actions performed, waiting for the next cycle..."
+    echo -e "${LC}$(date +'%Y-%m-%d %H:%M:%S')${NC} - Actions performed, waiting for the next cycle..."
 
     sleep 60
 done
