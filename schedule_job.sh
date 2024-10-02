@@ -18,6 +18,7 @@ echo -e "${LC}|          |___|_|_|___|___|___|_|___|_|  ${NC}"
 echo -e "${LC}|_____     |${NC}    Tool ~ ${LG}Jobscheduler${NC}"
 echo -e "${LC}|          |${NC}    Dev  ~ ${LP}@Ch3ckr${NC}"
 echo -e "${LC}|__________|${NC}    URL  ~ ${Y}https://gui.rg3d.eu${NC}"
+echo
 
 while true; do
     # Perform actions and log messages
@@ -28,7 +29,7 @@ while true; do
     bash /data/data/com.termux/files/home/rg3d_cpu.sh > /dev/null 2>&1
 
     # Log the end of the minute
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - Actions performed, waiting for the next cycle..."
+    echo "${LC}$(date +'%Y-%m-%d %H:%M:%S')${NC} - Actions performed, waiting for the next cycle..."
 
     sleep 60
 done
