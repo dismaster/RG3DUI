@@ -157,15 +157,12 @@ check_shares() {
     shares=$(echo 'summary' | nc 127.0.0.1 4068 | tr -d '\0' | grep -oP '(?<=ACC=)[0-9]+')
     if [ -z "$shares" ]; then
         shares_status="\033[31mError (no share data).\033[0m"
-        echo -e "${LP}->${NC} Shares:$shares_status"
         exit 1
     elif [ "$shares" -lt 150 ]; then
         shares_status="\033[31m$shares (Bad - Below 150).\033[0m"
-        echo -e "${LP}->${NC} Shares:$shares_status"
         exit 0
     else
         shares_status="\033[32m$shares (Good).\033[0m"
-        echo -e "${LP}->${NC} Shares:$shares_status"
     fi
 }
 
