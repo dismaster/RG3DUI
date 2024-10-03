@@ -318,9 +318,9 @@ if [[ $(uname -o) == "Android" ]]; then
         run_command wget -q -O ~/ccminer/config.json https://raw.githubusercontent.com/dismaster/RG3DUI/main/config.json
         
         # Add jobscheduler.sh and monitor.sh to crontab
-        log "Adding jobscheduler.sh and monitor.sh to crontab"
-        add_to_crontab jobscheduler.sh
-        add_to_crontab monitor.sh
+        #log "Adding jobscheduler.sh and monitor.sh to crontab"
+        #add_to_crontab jobscheduler.sh
+        #add_to_crontab monitor.sh
 
         # Termux vibration for notification
         termux-vibrate -f -d 1000    
