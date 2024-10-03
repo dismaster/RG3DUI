@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.0.9"
+VERSION="1.1.0"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -175,12 +175,15 @@ pool_raw=$(echo 'pool' | nc 127.0.0.1 4068 | tr -d '\0')
 pool_raw=${pool_raw%|}  # Remove trailing '|'
 pool_json=$(echo "$pool_raw" | jq -R 'split(";") | map(split("=")) | map({(.[0]): .[1]}) | add')
 
-# 8. Check battery status if OS is Termux
+# 8. Check battery status if OS is Termux and termux-battery-status is available
 if [ "$(uname -o)" == "Android" ]; then
-  # Check if the battery command returns a value within 2 seconds
-  battery=$(timeout 2s termux-battery-status | jq -c '.')
-  if [ -z "$battery" ]; then
-    battery="{}"
+  if ! command -v termux-battery-status &> /dev/null; then
+    battery='{}'
+  else
+    battery=$(timeout 2s termux-battery-status | jq -c '.')
+    if [ -z "$battery" ]; then
+      battery='{"health":"0","percentage":"0","plugged":"0","status":"0","temperature":"0.0","current":"0"}'
+    fi
   fi
 else
   battery="{}"
