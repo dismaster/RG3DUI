@@ -20,9 +20,9 @@ LP='\033[1;35m'  # Light Purple
 # Log file location
 LOG_FILE="gui_setup.log"
 
-# Logging function
+# Logging function (hidden from user, only saved to log file)
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - v$VERSION - $@" | tee -a $LOG_FILE
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - v$VERSION - $@" >> $LOG_FILE
 }
 
 # Function to run commands and log their output
