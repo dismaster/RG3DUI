@@ -45,14 +45,14 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-# Fancy Banner with RG3D VERUS Logo
+# Banner
 echo -e "${LC} ___             __         __ __${NC}"
 echo -e "${LC}|   .-----.-----|  |_.---.-|  |  .-----.----.${NC}"
 echo -e "${LC}|.  |     |__ --|   _|  _  |  |  |  -__|   _|${NC}"
 echo -e "${LC}|.  |__|__|_____|____|___._|__|__|_____|__|${NC}  "
 echo -e "${LC}|:  |       Developer ~ ${LP}@Ch3ckr${NC}"
 echo -e "${LC}|::.|       Tool      ~ ${LG}RG3D Installer${NC}"
-echo -e "${LC}`---´       For More  ~ ${LY}https://gui.rg3d.eu${NC}"
+echo -e "${LC}'---'       For More  ~ ${LY}https://gui.rg3d.eu${NC}"
 echo  # New line for spacing
 echo -e "${R}->${NC} ${LC}This process may take a while...${NC}"
 echo  # New line for spacing
