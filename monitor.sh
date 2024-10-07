@@ -57,8 +57,6 @@ send_data() {
     auth_header="Authorization: Bearer $miner_token"
   elif [ -n "$rig_pw" ]; then
     data+="&password=$rig_pw"
-  elif [ -n "$password" ]; then
-    data+="&password=$password"
   fi
 
   if [ "$dryrun" == true ]; then
@@ -192,11 +190,10 @@ fi
 # 1. Check if ~/rig.conf exists and necessary credentials are set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
-  password=$(grep -E "^password=" ~/rig.conf | cut -d '=' -f 2)
   miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
   
-  if [ -z "$rig_pw" ] && [ -z "$password" ] && [ -z "$miner_token" ]; then
+  if [ -z "$rig_pw" ] && [ -z "$miner_token" ]; then
     echo "Neither rig_pw, password, nor miner_token is set in ~/rig.conf. Exiting."
     exit 1
   fi
