@@ -19,10 +19,6 @@ authenticate() {
   local url="https://api.rg3d.eu:8443/api.php"
   local data="password=$rig_pw"
 
-  if [ -n "$miner_id" ]; then
-    data+="&miner_id=$miner_id"
-  fi
-
   response=$(curl -s -X POST -d "$data" "$url")
   miner_token=$(echo "$response" | jq -r '.miner_token')
   new_miner_id=$(echo "$response" | jq -r '.miner_id')
@@ -79,7 +75,7 @@ send_data() {
   fi
 
   # Check if token is invalid or expired
-  if echo "$response" | grep -q "Invalid or expired token"; then
+  if echo "$response" | grep -q "Authentication failed"; then
     echo "Miner token invalid or expired. Re-authenticating..."
     authenticate
     # Retry sending data
