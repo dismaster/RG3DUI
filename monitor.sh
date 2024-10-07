@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -13,59 +13,136 @@ check_ssl_support() {
   fi
 }
 
-# Function to send data to PHP script or echo if dryrun
-send_data() {
+# Function to authenticate and get miner_token
+authenticate() {
+  echo "Authenticating with the server..."
   local url="https://api.rg3d.eu:8443/api.php"
-  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&password=$rig_pw&monitor_version=$VERSION&scheduler_version=$scheduler_version"
+  local data="password=$rig_pw"
 
   if [ -n "$miner_id" ]; then
     data+="&miner_id=$miner_id"
   fi
 
-  if [ "$dryrun" == true ]; then
-    echo "curl -s -X POST -d \"$data\" \"$url\""
-  elif [ "$ssl_supported" == "true" ]; then
-    response=$(curl -s -X POST -d "$data" "$url")
-    echo "Response from server: $response"
-  else
-    response=$(curl -s -k -X POST -d "$data" "$url")
-    echo "Response from server (insecure): $response"
-  fi
+  response=$(curl -s -X POST -d "$data" "$url")
+  miner_token=$(echo "$response" | jq -r '.miner_token')
+  new_miner_id=$(echo "$response" | jq -r '.miner_id')
 
-  # Extracting miner_id from the response
-  miner_id=$(echo "$response" | jq -r '.miner_id')
-
-  # Check if miner_id is valid and update rig.conf
-  if [[ "$miner_id" =~ ^[0-9]+$ ]]; then
-    update_rig_conf "$miner_id"
+  if [ -n "$miner_token" ] && [ "$miner_token" != "null" ]; then
+    # Save miner_token and miner_id to rig.conf
+    update_rig_conf "$new_miner_id" "$miner_token"
+    echo "Authentication successful. Miner Token obtained."
   else
-    echo "Invalid miner_id received: $miner_id"
+    echo "Authentication failed. Response: $response"
+    exit 1
   fi
 }
 
-# Function to update rig.conf with miner_id and ssl_supported
+# Function to send data to PHP script or echo if dryrun
+send_data() {
+  local url="https://api.rg3d.eu:8443/api.php"
+
+  # Load miner_token and miner_id from rig.conf
+  miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
+  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
+
+  # Build data payload
+  local data="hw_brand=$hw_brand&hw_model=$hw_model&ip=$ip&summary=$summary_json&pool=$pool_json&battery=$battery&cpu_temp=$cpu_temp_json&cpu_max=$cpu_count&monitor_version=$VERSION&scheduler_version=$scheduler_version"
+
+  if [ -n "$miner_id" ]; then
+    data+="&miner_id=$miner_id"
+  fi
+
+  if [ -n "$rig_pw" ]; then
+    data+="&password=$rig_pw"
+  fi
+
+  if [ "$dryrun" == true ]; then
+    if [ -n "$miner_token" ]; then
+      echo "curl -s -X POST -H 'Authorization: Bearer $miner_token' -d \"$data\" \"$url\""
+    else
+      echo "curl -s -X POST -d \"$data\" \"$url\""
+    fi
+  elif [ "$ssl_supported" == "true" ]; then
+    if [ -n "$miner_token" ]; then
+      response=$(curl -s -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    else
+      response=$(curl -s -X POST -d "$data" "$url")
+    fi
+    echo "Response from server: $response"
+  else
+    if [ -n "$miner_token" ]; then
+      response=$(curl -s -k -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    else
+      response=$(curl -s -k -X POST -d "$data" "$url")
+    fi
+    echo "Response from server (insecure): $response"
+  fi
+
+  # Check if token is invalid or expired
+  if echo "$response" | grep -q "Invalid or expired token"; then
+    echo "Miner token invalid or expired. Re-authenticating..."
+    authenticate
+    # Retry sending data
+    miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
+    response=$(curl -s -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    echo "Response from server after re-authentication: $response"
+  fi
+
+  # Extract miner_token and miner_id from the response if provided
+  new_miner_token=$(echo "$response" | jq -r '.miner_token')
+  new_miner_id=$(echo "$response" | jq -r '.miner_id')
+
+  if [ -n "$new_miner_token" ] && [ "$new_miner_token" != "null" ]; then
+    update_rig_conf "$new_miner_id" "$new_miner_token"
+  fi
+}
+
+# Function to update rig.conf with miner_id, miner_token, and ssl_supported
 update_rig_conf() {
   local miner_id=$1
+  local miner_token=$2
   local rig_conf_path=~/rig.conf
 
   if [ -f "$rig_conf_path" ]; then
-    if grep -q "miner_id=" "$rig_conf_path"; then
-      sed -i "s/miner_id=.*/miner_id=$(printf '%q' "$miner_id")/" "$rig_conf_path"
+    # Update miner_id
+    if grep -q "^miner_id=" "$rig_conf_path"; then
+      sed -i "s/^miner_id=.*/miner_id=$(printf '%q' "$miner_id")/" "$rig_conf_path"
     else
       echo "miner_id=$miner_id" >> "$rig_conf_path"
     fi
 
-    if grep -q "ssl_supported=" "$rig_conf_path"; then
-      sed -i "s/ssl_supported=.*/ssl_supported=$(printf '%q' "$ssl_supported")/" "$rig_conf_path"
+    # Update miner_token
+    if [ -n "$miner_token" ]; then
+      if grep -q "^miner_token=" "$rig_conf_path"; then
+        sed -i "s/^miner_token=.*/miner_token=$(printf '%q' "$miner_token")/" "$rig_conf_path"
+      else
+        echo "miner_token=$miner_token" >> "$rig_conf_path"
+      fi
+    fi
+
+    # Update ssl_supported
+    if grep -q "^ssl_supported=" "$rig_conf_path"; then
+      sed -i "s/^ssl_supported=.*/ssl_supported=$(printf '%q' "$ssl_supported")/" "$rig_conf_path"
     else
       echo "ssl_supported=$ssl_supported" >> "$rig_conf_path"
     fi
   else
     echo "rig.conf file not found. Creating a new one."
     echo "miner_id=$miner_id" > "$rig_conf_path"
+    [ -n "$miner_token" ] && echo "miner_token=$miner_token" >> "$rig_conf_path"
     echo "ssl_supported=$ssl_supported" >> "$rig_conf_path"
   fi
 }
+
+# Ensure jq is installed
+if ! command -v jq &> /dev/null; then
+  echo "jq is required but not installed. Installing jq..."
+  if [ "$(uname -o)" == "Android" ]; then
+    pkg install jq -y
+  else
+    sudo apt-get install jq -y
+  fi
+fi
 
 # Determine SSL support and update rig.conf only if not already set
 ssl_supported="false"
@@ -106,14 +183,16 @@ if [ "$1" == "--dryrun" ]; then
   dryrun=true
 fi
 
-# 1. Check if ~/rig.conf exists and rig_pw is set
+# 1. Check if ~/rig.conf exists and necessary credentials are set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
-  if [ -z "$rig_pw" ]; then
-    echo "rig_pw not set in ~/rig.conf. Exiting."
+  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
+  miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
+  
+  if [ -z "$rig_pw" ] && [ -z "$miner_token" ]; then
+    echo "Neither rig_pw nor miner_token is set in ~/rig.conf. Exiting."
     exit 1
   fi
-  miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
 else
   echo "~/rig.conf file not found. Exiting."
   exit 1
@@ -235,6 +314,12 @@ cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
 
 # Get the scheduler version from the jobscheduler.sh file
 scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler.sh | cut -d '=' -f 2 | tr -d '"')
+
+# Authenticate if miner_token is missing
+miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
+if [ -z "$miner_token" ]; then
+  authenticate
+fi
 
 # Send data to PHP script or echo if dryrun
 send_data
