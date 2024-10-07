@@ -315,10 +315,14 @@ cpu_temp_json="{\"temp\":\"$cpu_temp\"}"
 # Get the scheduler version from the jobscheduler.sh file
 scheduler_version=$(grep -E "^VERSION=" ~/jobscheduler.sh | cut -d '=' -f 2 | tr -d '"')
 
-# Authenticate if miner_token is missing
-miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
+# Authenticate if miner_token is missing and rig_pw is available
 if [ -z "$miner_token" ]; then
-  authenticate
+  if [ -n "$rig_pw" ]; then
+    authenticate
+  else
+    echo "Cannot authenticate because neither miner_token nor rig_pw is available."
+    exit 1
+  fi
 fi
 
 # Send data to PHP script or echo if dryrun
