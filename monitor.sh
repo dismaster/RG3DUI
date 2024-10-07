@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.2.0"
+VERSION="1.2.3"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -18,6 +18,10 @@ authenticate() {
   echo "Authenticating with the server..."
   local url="https://api.rg3d.eu:8443/api.php"
   local data="password=$rig_pw"
+
+  if [ -n "$miner_id" ]; then
+    data+="&miner_id=$miner_id"
+  fi
 
   response=$(curl -s -X POST -d "$data" "$url")
   miner_token=$(echo "$response" | jq -r '.miner_token')
@@ -48,26 +52,31 @@ send_data() {
     data+="&miner_id=$miner_id"
   fi
 
-  if [ -n "$rig_pw" ]; then
+  # Handle authentication
+  if [ -n "$miner_token" ]; then
+    auth_header="Authorization: Bearer $miner_token"
+  elif [ -n "$rig_pw" ]; then
     data+="&password=$rig_pw"
+  elif [ -n "$password" ]; then
+    data+="&password=$password"
   fi
 
   if [ "$dryrun" == true ]; then
-    if [ -n "$miner_token" ]; then
-      echo "curl -s -X POST -H 'Authorization: Bearer $miner_token' -d \"$data\" \"$url\""
+    if [ -n "$auth_header" ]; then
+      echo "curl -s -X POST -H '$auth_header' -d \"$data\" \"$url\""
     else
       echo "curl -s -X POST -d \"$data\" \"$url\""
     fi
   elif [ "$ssl_supported" == "true" ]; then
-    if [ -n "$miner_token" ]; then
-      response=$(curl -s -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    if [ -n "$auth_header" ]; then
+      response=$(curl -s -X POST -H "$auth_header" -d "$data" "$url")
     else
       response=$(curl -s -X POST -d "$data" "$url")
     fi
     echo "Response from server: $response"
   else
-    if [ -n "$miner_token" ]; then
-      response=$(curl -s -k -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    if [ -n "$auth_header" ]; then
+      response=$(curl -s -k -X POST -H "$auth_header" -d "$data" "$url")
     else
       response=$(curl -s -k -X POST -d "$data" "$url")
     fi
@@ -75,12 +84,13 @@ send_data() {
   fi
 
   # Check if token is invalid or expired
-  if echo "$response" | grep -q "Authentication failed"; then
+  if echo "$response" | grep -q "Invalid or expired token"; then
     echo "Miner token invalid or expired. Re-authenticating..."
     authenticate
     # Retry sending data
     miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
-    response=$(curl -s -X POST -H "Authorization: Bearer $miner_token" -d "$data" "$url")
+    auth_header="Authorization: Bearer $miner_token"
+    response=$(curl -s -X POST -H "$auth_header" -d "$data" "$url")
     echo "Response from server after re-authentication: $response"
   fi
 
@@ -182,16 +192,27 @@ fi
 # 1. Check if ~/rig.conf exists and necessary credentials are set
 if [ -f ~/rig.conf ]; then
   rig_pw=$(grep -E "^rig_pw=" ~/rig.conf | cut -d '=' -f 2)
+  password=$(grep -E "^password=" ~/rig.conf | cut -d '=' -f 2)
   miner_id=$(grep -E "^miner_id=" ~/rig.conf | cut -d '=' -f 2)
   miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
   
-  if [ -z "$rig_pw" ] && [ -z "$miner_token" ]; then
-    echo "Neither rig_pw nor miner_token is set in ~/rig.conf. Exiting."
+  if [ -z "$rig_pw" ] && [ -z "$password" ] && [ -z "$miner_token" ]; then
+    echo "Neither rig_pw, password, nor miner_token is set in ~/rig.conf. Exiting."
     exit 1
   fi
 else
   echo "~/rig.conf file not found. Exiting."
   exit 1
+fi
+
+# Authenticate if miner_token is missing
+if [ -z "$miner_token" ]; then
+  if [ -n "$rig_pw" ] || [ -n "$password" ]; then
+    authenticate
+  else
+    echo "Cannot authenticate because neither miner_token nor rig_pw/password is available."
+    exit 1
+  fi
 fi
 
 # 2. Check hardware brand and format to uppercase
