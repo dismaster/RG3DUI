@@ -312,6 +312,7 @@ if [[ $(uname -o) == "Android" ]]; then
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh rg3d_cpu.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/clean_rig_conf.sh clean_rig_conf.sh
         
         # Install default config for DONATION
         log "Downloading default config"
@@ -359,6 +360,7 @@ else
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/monitor.sh monitor.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/rg3d_cpu.sh rg3d_cpu.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/clean_rig_conf.sh clean_rig_conf.sh
 
         # Add jobscheduler.sh and monitor.sh to crontab
         add_to_crontab jobscheduler.sh
