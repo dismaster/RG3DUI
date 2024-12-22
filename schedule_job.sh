@@ -12,12 +12,12 @@ P='\033[0;35m'   # Purple
 LP='\033[1;35m'  # Light Purple
 
 echo -e "${LC} __________     _         _     _         ${NC}"
-echo -e "${LC}|          |___| |_ ___ _| |_ _| |___ ___ ${NC}"
-echo -e "${LC}|     _____|  _|   | -_| . | | | | -_|  _|${NC}"
-echo -e "${LC}|          |___|_|_|___|___|___|_|___|_|  ${NC}"
-echo -e "${LC}|_____     |${NC}    Tool ~ ${LG}Jobscheduler${NC}"
-echo -e "${LC}|          |${NC}    Dev  ~ ${LP}@Ch3ckr${NC}"
-echo -e "${LC}|__________|${NC}    URL  ~ ${Y}https://gui.rg3d.eu${NC}"
+echo -e "${LC}|::        |___| |_ ___ _| |_ _| |___ ___ ${NC}"
+echo -e "${LC}|:    _____|  _|   | -_| . | | | | -_|  _|${NC}"
+echo -e "${LC}|:.       :|___|_|_|___|___|___|_|___|_|  ${NC}"
+echo -e "${LC}|_____    :|${NC}    Tool ~ ${LG}Jobscheduler${NC}"
+echo -e "${LC}|:.      .:|${NC}    Dev  ~ ${LP}@Ch3ckr${NC}"
+echo -e "${LC}'----------'${NC}    URL  ~ ${Y}https://gui.rg3d.eu${NC}"
 echo
 
 while true; do
