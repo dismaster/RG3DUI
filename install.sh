@@ -322,7 +322,18 @@ if [[ $(uname -o) == "Android" ]]; then
         #log "Adding jobscheduler.sh and monitor.sh to crontab"
         #add_to_crontab jobscheduler.sh
         #add_to_crontab monitor.sh
-
+        
+        # Start Scheduler
+        run_command screen -dmS Scheduler bash ~/schedule_job.sh
+        
+        # Flash LED 3 times
+        termux-torch on
+        termux-torch off
+        termux-torch on
+        termux-torch off
+        termux-torch on
+        termux-torch off
+        
         # Termux vibration for notification
         termux-vibrate -f -d 1000    
     else
