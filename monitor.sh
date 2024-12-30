@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.2.4"
+VERSION="1.2.5"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
-  local url="https://api.rg3d.eu/api.php"
+  local url="https://gui.rg3d.eu/api.php"
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
     return 0  # SSL supported
   else
@@ -16,7 +16,7 @@ check_ssl_support() {
 # Function to authenticate and get miner_token
 authenticate() {
   echo "Authenticating with the server..."
-  local url="https://api.rg3d.eu/api.php"
+  local url="https://gui.rg3d.eu/api.php"
   local data="password=$rig_pw"
 
   if [ -n "$miner_id" ]; then
@@ -39,7 +39,7 @@ authenticate() {
 
 # Function to send data to PHP script or echo if dryrun
 send_data() {
-  local url="https://api.rg3d.eu/api.php"
+  local url="https://gui.rg3d.eu/api.php"
 
   # Load miner_token and miner_id from rig.conf
   miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
