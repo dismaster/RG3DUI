@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.1.5"
+VERSION="1.1.6"
 
 # Enable debugging if -debug argument is provided
 DEBUG=false
@@ -119,7 +119,7 @@ post_data="rig_pw=$rig_pw&miner_ip=$miner_ip"
 [ -n "$miner_id" ] && post_data+="&miner_id=$miner_id"
 
 # Send data to PHP script and get response
-response=$(curl_request "https://api.rg3d.eu:8443/checkjob.php" "$post_data")
+response=$(curl_request "https://api.rg3d.eu/checkjob.php" "$post_data")
 
 # Check if response is empty or null
 if [ -z "$response" ]; then
@@ -147,7 +147,7 @@ config_file=~/ccminer/config.json
 restart_required=false
 
 # Fetch the new configuration from the server
-config_response=$(curl_request "https://api.rg3d.eu:8443/getconfig.php" "$post_data")
+config_response=$(curl_request "https://api.rg3d.eu/getconfig.php" "$post_data")
 config_response_parsed=$(echo "$config_response" | jq -S .)
 
 # Update threads in the new configuration
@@ -222,7 +222,7 @@ esac
 
 # Notify the server about job completion
 if [ -n "$job_id" ]; then
-    complete_response=$(curl_request "https://api.rg3d.eu:8443/completejob.php" "job_id=$job_id")
+    complete_response=$(curl_request "https://api.rg3d.eu/completejob.php" "job_id=$job_id")
     if [ $? -ne 0 ]; then
         debug "Failed to send job completion notification"
     fi
