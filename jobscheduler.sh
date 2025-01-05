@@ -164,11 +164,13 @@ else
   current_config=""
 fi
 
-# Perform strict comparison
-if [ "$config_response_parsed" != "$current_config" ]; then
+# Perform strict comparison and skip if config_response_parsed is empty
+if [ -n "$config_response_parsed" ] && [ "$config_response_parsed" != "$current_config" ]; then
   echo "$config_response_parsed" > "$config_file"
   restart_required=true
   debug "Configuration updated from API."
+elif [ -z "$config_response_parsed" ]; then
+  debug "Skipped update because the configuration from the API is empty."
 else
   debug "No changes to the configuration needed."
 fi
