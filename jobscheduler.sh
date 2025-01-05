@@ -44,7 +44,7 @@ restart_ccminer() {
 
 # Function to check internet connection and restart WiFi if down
 check_internet_connection() {
-  x=$(ping -c1 google.com 2>&1 | grep unknown)
+  x=$(ping -c1 1.0.0.1 2>&1 | grep unknown)
   if [ ! "$x" = "" ]; then
     debug "Internet is down! Attempting to restart network."
     if [ -n "$(uname -o | grep Android)" ]; then
