@@ -238,18 +238,32 @@ hw_model=$(echo "$hw_model" | tr '[:lower:]' '[:upper:]')
 if [ -n "$(uname -o | grep Android)" ]; then
   # For Android
   ip=$(termux-wifi-connectioninfo | grep -oP '(?<="ip": ")[^"]*')
-  if [ -z "$ip" ]; then  # Fallback to previous method if no IP is found
+  # Check if IP is empty or 0.0.0.0
+  if [ -z "$ip" ] || [ "$ip" = "0.0.0.0" ]; then
+    # Fallback to previous method if no valid IP is found
     ip=$(ifconfig 2> /dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '[0-9.]*' | grep -v 127.0.0.1)
-    if [ -z "$ip" ]; then  # If no IP address was found, try with 'su' rights
+    # Check again if IP is empty or 0.0.0.0
+    if [ -z "$ip" ] || [ "$ip" = "0.0.0.0" ]; then
+      # If no IP address was found, try with 'su' rights
       if su -c true 2>/dev/null; then
         # SU rights are available
         ip=$(su -c ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1)
+        # Final check for IP validity
+        if [ -z "$ip" ] || [ "$ip" = "0.0.0.0" ]; then
+          echo "Failed to retrieve a valid IP address. Please check your network."
+        fi
+      else
+        echo "SU rights are not available. Unable to retrieve a valid IP address."
       fi
     fi
   fi
 else
   # For other Unix systems
   ip=$(ip -4 -o addr show | awk '$2 !~ /lo|docker/ {print $4}' | cut -d "/" -f 1 | head -n 1)
+  # Check if IP is empty or 0.0.0.0
+  if [ -z "$ip" ] || [ "$ip" = "0.0.0.0" ]; then
+    echo "Failed to retrieve a valid IP address. Please check your network."
+  fi
 fi
 
 # 5. Check if ccminer is running, exit if not
