@@ -4,7 +4,7 @@
 clear 
 
 # Installer version
-VERSION="1.0.8"
+VERSION="1.0.9"
 
 # ANSI color codes for formatting
 NC='\033[0m'     # No Color
@@ -313,6 +313,7 @@ if [[ $(uname -o) == "Android" ]]; then
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/schedule_job.sh schedule_job.sh
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/vcgencmd vcgencmd
         download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/clean_rig_conf.sh clean_rig_conf.sh
+        download_and_make_executable https://raw.githubusercontent.com/dismaster/RG3DUI/main/locator.sh locator.sh
         
         # Install default config for DONATION
         log "Downloading default config"
