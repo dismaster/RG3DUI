@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.2.6"
+VERSION="1.2.7"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
