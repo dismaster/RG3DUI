@@ -1,15 +1,32 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.2.7"
+VERSION="1.2.8"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
   local url="https://api.rg3d.eu:8443/api.php"
+  local rig_conf_path=~/rig.conf
+
+  # Initialize ssl_supported with the current value from rig.conf or default to "false"
+  ssl_supported=$(grep -E "^ssl_supported=" "$rig_conf_path" | cut -d '=' -f 2)
+  if [ -z "$ssl_supported" ]; then
+    ssl_supported="false"
+  fi
+
+  # Check if SSL is supported
   if curl --output /dev/null --silent --head --fail --connect-timeout 5 --max-time 10 "$url"; then
-    return 0  # SSL supported
+    if [ "$ssl_supported" != "true" ]; then
+      echo "SSL is supported. Updating rig.conf."
+      ssl_supported="true"
+      update_rig_conf "$miner_id" "$miner_token"
+    fi
   else
-    return 1  # SSL not supported
+    if [ "$ssl_supported" != "false" ]; then
+      echo "SSL is not supported. Updating rig.conf."
+      ssl_supported="false"
+      update_rig_conf "$miner_id" "$miner_token"
+    fi
   fi
 }
 
