@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Version number
-VERSION="1.2.8"
+VERSION="1.2.9"
 
 # Function to check if API URL is reachable with SSL
 check_ssl_support() {
@@ -41,15 +41,18 @@ authenticate() {
   fi
 
   response=$(curl -s -X POST -d "$data" "$url")
+  local status=$(echo "$response" | jq -r '.status')
   miner_token=$(echo "$response" | jq -r '.miner_token')
   new_miner_id=$(echo "$response" | jq -r '.miner_id')
 
-  if [ -n "$miner_token" ] && [ "$miner_token" != "null" ]; then
+  if [ "$status" == "success" ] && [ -n "$miner_token" ] && [ "$miner_token" != "null" ]; then
     # Save miner_token and miner_id to rig.conf
     update_rig_conf "$new_miner_id" "$miner_token"
     echo "Authentication successful. Miner Token obtained."
   else
     echo "Authentication failed. Response: $response"
+    echo "Resetting credentials in rig.conf..."
+    update_rig_conf "" "" # Remove credentials
     exit 1
   fi
 }
@@ -76,31 +79,18 @@ send_data() {
     data+="&password=$rig_pw"
   fi
 
-  if [ "$dryrun" == true ]; then
-    if [ -n "$auth_header" ]; then
-      echo "curl -s -X POST -H '$auth_header' -d \"$data\" \"$url\""
-    else
-      echo "curl -s -X POST -d \"$data\" \"$url\""
-    fi
-  elif [ "$ssl_supported" == "true" ]; then
-    if [ -n "$auth_header" ]; then
-      response=$(curl -s -X POST -H "$auth_header" -d "$data" "$url")
-    else
-      response=$(curl -s -X POST -d "$data" "$url")
-    fi
-    echo "Response from server: $response"
+  # Send data
+  if [ -n "$auth_header" ]; then
+    response=$(curl -s -X POST -H "$auth_header" -d "$data" "$url")
   else
-    if [ -n "$auth_header" ]; then
-      response=$(curl -s -k -X POST -H "$auth_header" -d "$data" "$url")
-    else
-      response=$(curl -s -k -X POST -d "$data" "$url")
-    fi
-    echo "Response from server (insecure): $response"
+    response=$(curl -s -X POST -d "$data" "$url")
   fi
+  echo "Response from server: $response"
 
   # Check if token is invalid or expired
   if echo "$response" | grep -q "Invalid or expired token"; then
-    echo "Miner token invalid or expired. Re-authenticating..."
+    echo "Miner token invalid or expired. Resetting credentials and re-authenticating..."
+    update_rig_conf "" "" # Remove stale credentials
     authenticate
     # Retry sending data
     miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
