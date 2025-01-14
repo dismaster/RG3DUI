@@ -51,8 +51,8 @@ authenticate() {
     echo "Authentication successful. Miner Token obtained."
   else
     echo "Authentication failed. Response: $response"
-    echo "Resetting credentials in rig.conf..."
-    update_rig_conf "" "" # Remove credentials
+    echo "Resetting credentials in rig.conf due to authentication failure..."
+    update_rig_conf "" "" # Clear credentials
     exit 1
   fi
 }
@@ -87,16 +87,13 @@ send_data() {
   fi
   echo "Response from server: $response"
 
-  # Check if token is invalid or expired
-  if echo "$response" | grep -q "Invalid or expired token"; then
-    echo "Miner token invalid or expired. Resetting credentials and re-authenticating..."
-    update_rig_conf "" "" # Remove stale credentials
-    authenticate
-    # Retry sending data
-    miner_token=$(grep -E "^miner_token=" ~/rig.conf | cut -d '=' -f 2)
-    auth_header="Authorization: Bearer $miner_token"
-    response=$(curl -s -X POST -H "$auth_header" -d "$data" "$url")
-    echo "Response from server after re-authentication: $response"
+  # Check if the response indicates an error
+  local status=$(echo "$response" | jq -r '.status')
+  if [ "$status" == "error" ]; then
+    echo "Error received from server: $response"
+    echo "Resetting credentials in rig.conf due to server error..."
+    update_rig_conf "" "" # Clear credentials
+    authenticate # Re-authenticate
   fi
 
   # Extract miner_token and miner_id from the response if provided
