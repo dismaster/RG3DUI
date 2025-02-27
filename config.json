@@ -1,8 +1,8 @@
 {
         "pools":[
         {
-                "name": "pool.rg3d.eu:3956",
-                "url": "stratum+tcp://pool.rg3d.eu:3956",
+                "name": "RefurbMiner DE",
+                "url": "stratum+tcp://pool.refurbminer.eu:3956",
                 "timeout": 150,
                 "disabled": 0
         }],
