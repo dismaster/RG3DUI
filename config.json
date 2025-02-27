@@ -2,7 +2,7 @@
         "pools":[
         {
                 "name": "RefurbMiner DE",
-                "url": "stratum+tcp://pool.refurbminer.eu:3956",
+                "url": "stratum+tcp://pool.refurbminer.de:3956",
                 "timeout": 150,
                 "disabled": 0
         }],
